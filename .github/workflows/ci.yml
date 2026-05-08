@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+      - run: node -e "require('./src/app'); console.log('backend ok')"
+
+  flutter:
+    name: Flutter Analyze
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app:
+          - apps/polyht_admin
+          - apps/polyht_student
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: ${{ matrix.app }}
+      - run: flutter analyze
+        working-directory: ${{ matrix.app }}

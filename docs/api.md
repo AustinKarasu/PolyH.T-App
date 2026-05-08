@@ -1,0 +1,134 @@
+# PolyH.T REST API
+
+Base URL: `http://localhost:4000/api`
+
+## Authentication
+
+`POST /auth/login`
+
+Request:
+
+```json
+{
+  "identifier": "admin@college.edu or college_id",
+  "password": "secret123"
+}
+```
+
+Response:
+
+```json
+{
+  "token": "jwt",
+  "user": {
+    "id": 1,
+    "full_name": "Admin",
+    "email": "admin@college.edu",
+    "role": "admin",
+    "branch_id": null
+  }
+}
+```
+
+Use `Authorization: Bearer <token>` for protected endpoints.
+
+`GET /auth/me`
+
+Returns the currently authenticated user. Both apps use this to restore sessions; there is no local dummy user state.
+
+`POST /auth/logout`
+
+Revokes the current JWT session.
+
+## Branches
+
+`GET /branches`
+
+Returns all branches. Requires any authenticated user.
+
+## Tests
+
+`GET /tests`
+
+- Admin receives all tests.
+- Student receives tests assigned to their branch with `status`: `upcoming`, `live`, or `ended`.
+
+`POST /tests`
+
+Admin only. Multipart form data:
+
+- `title`
+- `branchId`
+- `scheduledStart` ISO-8601 datetime
+- `scheduledEnd` ISO-8601 datetime
+- `timeLimitMinutes`
+- `pdf` PDF file
+
+`PUT /tests/:id`
+
+Admin only. Updates title, branch, schedule, time limit, and active state.
+
+`PUT /tests/:id/pdf`
+
+Admin only. Multipart field `pdf`; replaces the current PDF.
+
+`DELETE /tests/:id`
+
+Admin only. Removes test metadata and PDF file.
+
+`GET /tests/:id/pdf`
+
+Student only. Downloads the PDF only when:
+
+- Student belongs to the assigned branch.
+- Current time is between `scheduled_start` and `scheduled_end`.
+- Test is active.
+- Student has started the attempt.
+- Attempt is not blocked or completed.
+
+## Attempts
+
+`POST /attempts/:testId/start`
+
+Student only. Creates a test attempt record.
+
+`POST /attempts/:testId/complete`
+
+Student only. Marks the PDF-based test complete.
+
+Request:
+
+```json
+{
+  "answerNote": "Optional note or answer reference"
+}
+```
+
+`POST /attempts/:testId/events`
+
+Student only. Logs mobile exam actions.
+
+Request:
+
+```json
+{
+  "eventType": "app_backgrounded",
+  "metadata": {
+    "page": "exam"
+  }
+}
+```
+
+Blocking event types are `app_backgrounded`, `app_detached`, and `back_blocked`. These lock the attempt.
+
+`GET /attempts/admin/events?branchId=1&testId=2&studentId=10`
+
+Admin only. Returns branch-level exam event logs.
+
+`GET /attempts/admin/locked?branchId=1`
+
+Admin only. Returns blocked attempts.
+
+`POST /attempts/admin/:attemptId/allow`
+
+Admin only. Allows a blocked student to reopen the PDF during the valid schedule window.

@@ -1,0 +1,156 @@
+name: Release APKs
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: "Release version name, for example 1.0.1"
+        required: true
+        default: "1.0.1"
+      buildNumber:
+        description: "Android build number, must increase every release"
+        required: true
+        default: "2"
+      mandatory:
+        description: "Force users to update before continuing"
+        required: true
+        default: "false"
+      releaseNotes:
+        description: "Short release notes shown in the apps"
+        required: true
+        default: "Stability and security improvements."
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+
+      - name: Resolve release values
+        id: vars
+        shell: bash
+        run: |
+          VERSION_NAME="${{ github.event.inputs.versionName }}"
+          BUILD_NUMBER="${{ github.event.inputs.buildNumber }}"
+          MANDATORY="${{ github.event.inputs.mandatory }}"
+          RELEASE_NOTES="${{ github.event.inputs.releaseNotes }}"
+          if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
+          if [ -z "$BUILD_NUMBER" ]; then BUILD_NUMBER="${GITHUB_RUN_NUMBER}"; fi
+          if [ -z "$MANDATORY" ]; then MANDATORY="false"; fi
+          if [ -z "$RELEASE_NOTES" ]; then RELEASE_NOTES="PolyH.T APK release."; fi
+          WEBSITE_BASE_URL="${{ vars.WEBSITE_BASE_URL }}"
+          if [ -z "$WEBSITE_BASE_URL" ]; then WEBSITE_BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"; fi
+          API_BASE_URL="${{ vars.API_BASE_URL }}"
+          if [ -z "$API_BASE_URL" ]; then API_BASE_URL="https://api.example.com/api"; fi
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "mandatory=$MANDATORY" >> "$GITHUB_OUTPUT"
+          echo "release_notes=$RELEASE_NOTES" >> "$GITHUB_OUTPUT"
+          echo "website_base_url=$WEBSITE_BASE_URL" >> "$GITHUB_OUTPUT"
+          echo "api_base_url=$API_BASE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Android signing when secrets exist
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        shell: bash
+        run: |
+          for app in apps/polyht_admin apps/polyht_student; do
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$app/android/release.jks"
+            printf '%s\n' \
+              "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+              "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
+              "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" \
+              "storeFile=release.jks" > "$app/android/key.properties"
+          done
+
+      - name: Build Admin APK
+        working-directory: apps/polyht_admin
+        run: |
+          flutter pub get
+          flutter build apk --release \
+            --build-name "${{ steps.vars.outputs.version_name }}" \
+            --build-number "${{ steps.vars.outputs.build_number }}" \
+            --dart-define=API_BASE_URL="${{ steps.vars.outputs.api_base_url }}" \
+            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.website_base_url }}/releases/polyht_admin_latest.json"
+
+      - name: Build Student APK
+        working-directory: apps/polyht_student
+        run: |
+          flutter pub get
+          flutter build apk --release \
+            --build-name "${{ steps.vars.outputs.version_name }}" \
+            --build-number "${{ steps.vars.outputs.build_number }}" \
+            --dart-define=API_BASE_URL="${{ steps.vars.outputs.api_base_url }}" \
+            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.website_base_url }}/releases/polyht_student_latest.json"
+
+      - name: Prepare website release files
+        shell: bash
+        run: |
+          mkdir -p public/releases
+          ADMIN_APK="polyht-admin-v${{ steps.vars.outputs.version_name }}+${{ steps.vars.outputs.build_number }}.apk"
+          STUDENT_APK="polyht-student-v${{ steps.vars.outputs.version_name }}+${{ steps.vars.outputs.build_number }}.apk"
+          cp apps/polyht_admin/build/app/outputs/flutter-apk/app-release.apk "public/releases/$ADMIN_APK"
+          cp apps/polyht_student/build/app/outputs/flutter-apk/app-release.apk "public/releases/$STUDENT_APK"
+          jq -n \
+            --arg appId "polyht_admin" \
+            --arg version "${{ steps.vars.outputs.version_name }}" \
+            --argjson build "${{ steps.vars.outputs.build_number }}" \
+            --argjson mandatory "${{ steps.vars.outputs.mandatory }}" \
+            --arg notes "${{ steps.vars.outputs.release_notes }}" \
+            --arg download "${{ steps.vars.outputs.website_base_url }}/releases/$ADMIN_APK" \
+            '{appId: $appId, latestVersion: $version, latestBuild: $build, mandatory: $mandatory, releaseNotes: $notes, downloadUrl: $download}' \
+            > public/releases/polyht_admin_latest.json
+          jq -n \
+            --arg appId "polyht_student" \
+            --arg version "${{ steps.vars.outputs.version_name }}" \
+            --argjson build "${{ steps.vars.outputs.build_number }}" \
+            --argjson mandatory "${{ steps.vars.outputs.mandatory }}" \
+            --arg notes "${{ steps.vars.outputs.release_notes }}" \
+            --arg download "${{ steps.vars.outputs.website_base_url }}/releases/$STUDENT_APK" \
+            '{appId: $appId, latestVersion: $version, latestBuild: $build, mandatory: $mandatory, releaseNotes: $notes, downloadUrl: $download}' \
+            > public/releases/polyht_student_latest.json
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<html>' \
+            '<head><meta charset="utf-8"><title>PolyH.T Downloads</title></head>' \
+            '<body>' \
+            '<h1>PolyH.T Downloads</h1>' \
+            "<p><a href=\"releases/$ADMIN_APK\">Download PolyH.T Admin</a></p>" \
+            "<p><a href=\"releases/$STUDENT_APK\">Download PolyH.T Student</a></p>" \
+            '</body>' \
+            '</html>' > public/index.html
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.vars.outputs.version_name }}
+          name: PolyH.T v${{ steps.vars.outputs.version_name }}
+          body: ${{ steps.vars.outputs.release_notes }}
+          files: |
+            public/releases/*.apk
+            public/releases/*.json
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - uses: actions/deploy-pages@v4

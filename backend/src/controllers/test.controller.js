@@ -1,0 +1,87 @@
+const testService = require('../services/test.service');
+
+async function createTest(req, res, next) {
+  try {
+    const test = await testService.createTest({
+      title: req.body.title,
+      branchId: Number(req.body.branchId),
+      scheduledStart: req.body.scheduledStart,
+      scheduledEnd: req.body.scheduledEnd,
+      timeLimitMinutes: Number(req.body.timeLimitMinutes),
+      file: req.file,
+      createdBy: req.user.sub
+    });
+    res.status(201).json({ test });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listTests(req, res, next) {
+  try {
+    const tests = req.user.role === 'admin'
+      ? await testService.listAdminTests()
+      : await testService.listStudentTests(req.user);
+    res.json({ tests });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateTest(req, res, next) {
+  try {
+    const test = await testService.updateTest(Number(req.params.id), {
+      title: req.body.title,
+      branchId: Number(req.body.branchId),
+      scheduledStart: req.body.scheduledStart,
+      scheduledEnd: req.body.scheduledEnd,
+      timeLimitMinutes: Number(req.body.timeLimitMinutes),
+      isActive: Boolean(req.body.isActive)
+    });
+    res.json({ test });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function replacePdf(req, res, next) {
+  try {
+    const test = await testService.replacePdf(Number(req.params.id), req.file);
+    res.json({ test });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function removeTest(req, res, next) {
+  try {
+    await testService.removeTest(Number(req.params.id));
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function downloadPdf(req, res, next) {
+  try {
+    const delivery = await testService.getStudentPdf(Number(req.params.id), req.user, {
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    if (delivery.type === 'redirect') {
+      return res.redirect(delivery.value);
+    }
+    return res.download(delivery.value);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  createTest,
+  listTests,
+  updateTest,
+  replacePdf,
+  removeTest,
+  downloadPdf
+};

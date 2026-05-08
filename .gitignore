@@ -1,0 +1,16 @@
+node_modules/
+.env
+uploads/
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+android/local.properties
+ios/Pods/
+*.log
+.idea/
+*.iml
+tools/
+*.jks
+*.keystore
+key.properties
