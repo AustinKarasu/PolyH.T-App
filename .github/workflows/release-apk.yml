@@ -70,15 +70,23 @@ jobs:
           echo "api_base_url=$API_BASE_URL" >> "$GITHUB_OUTPUT"
 
       - name: Configure Android signing when secrets exist
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         shell: bash
         run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "No Android signing secret configured; building unsigned release APKs."
+            exit 0
+          fi
           for app in apps/polyht_admin apps/polyht_student; do
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$app/android/release.jks"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$app/android/release.jks"
             printf '%s\n' \
-              "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-              "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
-              "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" \
+              "storePassword=$ANDROID_KEYSTORE_PASSWORD" \
+              "keyPassword=$ANDROID_KEY_PASSWORD" \
+              "keyAlias=$ANDROID_KEY_ALIAS" \
               "storeFile=release.jks" > "$app/android/key.properties"
           done
 
