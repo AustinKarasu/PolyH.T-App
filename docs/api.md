@@ -10,8 +10,8 @@ Request:
 
 ```json
 {
-  "identifier": "admin@college.edu or college_id",
-  "password": "secret123"
+  "identifier": "<admin_email_or_student_college_id>",
+  "password": "<account_password>"
 }
 ```
 
@@ -23,7 +23,7 @@ Response:
   "user": {
     "id": 1,
     "full_name": "Admin",
-    "email": "admin@college.edu",
+    "email": "<admin_email>",
     "role": "admin",
     "branch_id": null,
     "branch_name": null,
@@ -212,7 +212,7 @@ Admin only. Creates a new admin:
 {
   "fullName": "New Admin",
   "email": "admin2@college.edu",
-  "password": "securepassword123"
+  "password": "<strong-temporary-password>"
 }
 ```
 

@@ -53,7 +53,7 @@ class _TestListScreenState extends State<TestListScreen> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.asset('assets/images/college_logo.png', width: 44, height: 44, fit: BoxFit.cover),
+                              child: Image.asset('assets/images/polyht_logo.png', width: 44, height: 44, fit: BoxFit.cover),
                             ),
                             const SizedBox(width: 12),
                             Expanded(

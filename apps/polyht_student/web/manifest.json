@@ -1,11 +1,11 @@
 {
-    "name": "polyht_student",
-    "short_name": "polyht_student",
+    "name": "PolyH.T Student",
+    "short_name": "PolyH.T Student",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#2D0A5B",
+    "theme_color": "#6D28D9",
+    "description": "Student app for secure Polytechnic House Tests.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
