@@ -61,7 +61,7 @@ jobs:
           WEBSITE_BASE_URL="${{ vars.WEBSITE_BASE_URL }}"
           if [ -z "$WEBSITE_BASE_URL" ]; then WEBSITE_BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"; fi
           API_BASE_URL="${{ vars.API_BASE_URL }}"
-          if [ -z "$API_BASE_URL" ]; then API_BASE_URL="https://api.example.com/api"; fi
+          if [ -z "$API_BASE_URL" ]; then API_BASE_URL="https://backend-two-mauve-83.vercel.app/api"; fi
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           echo "mandatory=$MANDATORY" >> "$GITHUB_OUTPUT"
