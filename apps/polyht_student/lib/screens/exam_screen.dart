@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 
+import '../config/app_theme.dart';
 import '../models/student_test.dart';
 import '../services/exam_security_service.dart';
 import '../services/test_service.dart';
@@ -24,20 +25,44 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   bool _loading = true;
   bool _hasFocusWarning = false;
   bool _locked = false;
+  int _currentPage = 0;
+  int _totalPages = 0;
+  late DateTime _startedAt;
+  Timer? _timer;
+  int _elapsedSeconds = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startedAt = DateTime.now();
+    _startTimer();
     _enterExam();
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _securityService.exitExamMode();
     super.dispose();
   }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _elapsedSeconds = DateTime.now().difference(_startedAt).inSeconds);
+      }
+    });
+  }
+
+  String get _formattedTime {
+    final m = (_elapsedSeconds ~/ 60).toString().padLeft(2, '0');
+    final s = (_elapsedSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  int get _remainingMinutes => widget.test.timeLimitMinutes - (_elapsedSeconds ~/ 60);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -64,45 +89,183 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           unawaited(_logEvent('back_blocked'));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Back navigation is disabled during the exam.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
         }
       },
       child: Scaffold(
+        // ── Exam AppBar ──
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: Text(widget.test.title),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: _locked
+                  ? const LinearGradient(colors: [Color(0xFFDC2626), Color(0xFFB91C1C)])
+                  : AppTheme.headerGradient,
+            ),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.test.title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (!_loading && !_locked)
+                Text(
+                  _totalPages > 0 ? 'Page ${_currentPage + 1} of $_totalPages' : '',
+                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                ),
+            ],
+          ),
           actions: [
-            TextButton(
-              onPressed: _complete,
-              child: const Text('Submit', style: TextStyle(color: Colors.white)),
-            )
+            // ── Timer chip ──
+            if (!_loading && !_locked)
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _remainingMinutes <= 5
+                      ? Colors.red.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 16,
+                      color: _remainingMinutes <= 5 ? Colors.yellow : Colors.white70,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formattedTime,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _remainingMinutes <= 5 ? Colors.yellow : Colors.white,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // ── Submit button ──
+            TextButton.icon(
+              onPressed: _locked ? null : _confirmComplete,
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              label: const Text('Submit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
           ],
         ),
+
         body: Column(
           children: [
+            // ── Warning banner ──
             if (_hasFocusWarning)
-              MaterialBanner(
-                backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-                content: Text(_locked
-                    ? 'This paper is locked. Contact the admin to reopen it.'
-                    : 'App switching was detected. Your attempt may be reviewed.'),
-                actions: [
-                  TextButton(onPressed: () => setState(() => _hasFocusWarning = false), child: const Text('Dismiss')),
-                ],
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                color: _locked ? AppTheme.error.withValues(alpha: 0.1) : AppTheme.accent.withValues(alpha: 0.1),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _locked ? Icons.lock_rounded : Icons.warning_amber_rounded,
+                          size: 20,
+                          color: _locked ? AppTheme.error : AppTheme.accent,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _locked
+                                ? 'This paper is locked. Contact your admin to reopen.'
+                                : 'App switching detected. Your attempt may be reviewed.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _locked ? AppTheme.error : AppTheme.ink,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (!_locked)
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () => setState(() => _hasFocusWarning = false),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
+
+            // ── PDF / Loading / Locked ──
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: AppTheme.primary),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading question paper…',
+                            style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.5)),
+                          ),
+                        ],
+                      ),
+                    )
                   : _locked
-                      ? const Center(child: Text('Paper locked. Admin permission is required to reopen.'))
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.error.withValues(alpha: 0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.lock_rounded, size: 40, color: AppTheme.error),
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'Paper Locked',
+                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Admin permission is required to reopen this test. Contact your invigilator.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.5)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
                       : _pdfPath == null
-                      ? const Center(child: Text('Unable to open PDF.'))
-                      : PDFView(
-                          filePath: _pdfPath!,
-                          enableSwipe: true,
-                          swipeHorizontal: false,
-                          autoSpacing: true,
-                          pageFling: true,
-                        ),
+                          ? const Center(child: Text('Unable to open PDF.'))
+                          : PDFView(
+                              filePath: _pdfPath!,
+                              enableSwipe: true,
+                              swipeHorizontal: false,
+                              autoSpacing: true,
+                              pageFling: true,
+                              onRender: (pages) => setState(() => _totalPages = pages ?? 0),
+                              onPageChanged: (page, _) => setState(() => _currentPage = page ?? 0),
+                            ),
             ),
           ],
         ),
@@ -130,6 +293,34 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
           _loading = false;
         });
       }
+    }
+  }
+
+  Future<void> _confirmComplete() async {
+    if (_locked) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Submit test?'),
+        content: const Text(
+          'Once submitted, you will not be able to reopen this paper. Make sure you have completed all questions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.success),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _complete();
     }
   }
 

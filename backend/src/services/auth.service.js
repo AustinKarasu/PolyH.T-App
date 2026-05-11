@@ -9,7 +9,10 @@ const { toMysqlDateTime } = require('../utils/date');
 async function login(identifier, password, context = {}) {
   const [rows] = await pool.execute(
     `SELECT u.id, u.full_name, u.email, u.college_id, u.password_hash, u.role,
-            u.branch_id, u.is_active, b.name AS branch_name, b.code AS branch_code
+            u.branch_id, u.is_active, u.dob, u.semester, u.roll_no, u.board_roll_no,
+            u.college_name, u.course_name, u.guardian_name, u.phone, u.address,
+            u.admission_year, u.photo_url,
+            b.name AS branch_name, b.code AS branch_code
      FROM users u
      LEFT JOIN branches b ON b.id = u.branch_id
      WHERE email = :identifier OR college_id = :identifier
@@ -62,7 +65,10 @@ async function login(identifier, password, context = {}) {
 async function getCurrentUser(userId) {
   const [rows] = await pool.execute(
     `SELECT u.id, u.full_name, u.email, u.college_id, u.role,
-            u.branch_id, b.name AS branch_name, b.code AS branch_code
+            u.branch_id, u.dob, u.semester, u.roll_no, u.board_roll_no,
+            u.college_name, u.course_name, u.guardian_name, u.phone, u.address,
+            u.admission_year, u.photo_url,
+            b.name AS branch_name, b.code AS branch_code
      FROM users u
      LEFT JOIN branches b ON b.id = u.branch_id
      WHERE u.id = :userId AND u.is_active = 1

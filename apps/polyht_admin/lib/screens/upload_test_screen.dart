@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../config/app_theme.dart';
 import '../models/branch.dart';
 import '../services/test_service.dart';
 
@@ -22,6 +23,7 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   DateTime? _start;
   DateTime? _end;
   String? _pdfPath;
+  String? _pdfName;
   bool _saving = false;
 
   @override
@@ -40,61 +42,148 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Test PDF')),
+      appBar: AppBar(
+        title: const Text('Upload Test PDF'),
+        flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // ── Header ──
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.cardGradient,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.upload_file_rounded, color: AppTheme.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Schedule a House Test',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                          Text(
+                            'Upload a PDF and set the exam window.',
+                            style: TextStyle(fontSize: 12, color: AppTheme.ink.withValues(alpha: 0.5)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Title ──
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Test title'),
-                validator: (value) => value == null || value.trim().length < 3 ? 'Enter a title' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Test title',
+                  prefixIcon: Icon(Icons.title_rounded),
+                ),
+                validator: (value) => value == null || value.trim().length < 3 ? 'Enter a title (min 3 chars)' : null,
               ),
               const SizedBox(height: 16),
+
+              // ── Branch dropdown ──
               DropdownButtonFormField<Branch>(
-                initialValue: _selectedBranch,
-                decoration: const InputDecoration(labelText: 'Branch'),
+                value: _selectedBranch,
+                decoration: const InputDecoration(
+                  labelText: 'Branch',
+                  prefixIcon: Icon(Icons.account_tree_outlined),
+                ),
                 items: _branches.map((branch) {
                   return DropdownMenuItem(value: branch, child: Text(branch.name));
                 }).toList(),
                 onChanged: (branch) => setState(() => _selectedBranch = branch),
-                validator: (value) => value == null ? 'Choose branch' : null,
+                validator: (value) => value == null ? 'Choose a branch' : null,
               ),
               const SizedBox(height: 16),
+
+              // ── Time limit ──
               TextFormField(
                 controller: _timeLimitController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Time limit in minutes'),
+                decoration: const InputDecoration(
+                  labelText: 'Time limit (minutes)',
+                  prefixIcon: Icon(Icons.timer_outlined),
+                ),
                 validator: (value) {
                   final minutes = int.tryParse(value ?? '');
                   return minutes == null || minutes <= 0 ? 'Enter valid minutes' : null;
                 },
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _pickSchedule,
-                icon: const Icon(Icons.schedule),
-                label: Text(_start == null ? 'Choose date and time' : '${_start!.toLocal()}'),
+              const SizedBox(height: 20),
+
+              // ── Schedule picker ──
+              _ActionTile(
+                icon: Icons.calendar_month_rounded,
+                label: _start == null
+                    ? 'Choose date & time'
+                    : '${_formatDate(_start!)} — ${_formatDate(_end!)}',
+                subtitle: _start == null ? 'Required' : null,
+                onTap: _pickSchedule,
               ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _pickPdf,
-                icon: const Icon(Icons.picture_as_pdf),
-                label: Text(_pdfPath == null ? 'Choose PDF' : _pdfPath!.split(RegExp(r'[\\/]')).last),
+
+              // ── PDF picker ──
+              _ActionTile(
+                icon: Icons.picture_as_pdf_rounded,
+                label: _pdfName ?? 'Choose PDF file',
+                subtitle: _pdfPath == null ? 'Required' : null,
+                trailing: _pdfPath != null
+                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20)
+                    : null,
+                onTap: _pickPdf,
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _saving ? null : _save,
-                child: _saving ? const CircularProgressIndicator() : const Text('Schedule test'),
+              const SizedBox(height: 32),
+
+              // ── Submit ──
+              SizedBox(
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Icon(Icons.publish_rounded),
+                  label: Text(_saving ? 'Scheduling…' : 'Schedule Test'),
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime dt) {
+    final d = dt.toLocal();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final h = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
+    final ampm = d.hour >= 12 ? 'PM' : 'AM';
+    return '${d.day} ${months[d.month - 1]}, $h:${d.minute.toString().padLeft(2, '0')} $ampm';
   }
 
   Future<void> _loadBranches() async {
@@ -108,7 +197,10 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   Future<void> _pickPdf() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
     if (result != null && result.files.single.path != null) {
-      setState(() => _pdfPath = result.files.single.path);
+      setState(() {
+        _pdfPath = result.files.single.path;
+        _pdfName = result.files.single.name;
+      });
     }
   }
 
@@ -131,7 +223,12 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate() || _pdfPath == null || _start == null || _end == null) return;
+    if (!_formKey.currentState!.validate() || _pdfPath == null || _start == null || _end == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields, choose a schedule, and pick a PDF.')),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       await _service.uploadTest(
@@ -143,8 +240,73 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
         pdfPath: _pdfPath!,
       );
       if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: ${e.toString().replaceAll("Exception: ", "")}')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+// ── Reusable action tile ──────────────────────────────────────────
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(color: AppTheme.primaryLight.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: AppTheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: TextStyle(fontSize: 11, color: AppTheme.ink.withValues(alpha: 0.4)),
+                    ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing!,
+            if (trailing == null) Icon(Icons.chevron_right, size: 20, color: AppTheme.ink.withValues(alpha: 0.3)),
+          ],
+        ),
+      ),
+    );
   }
 }

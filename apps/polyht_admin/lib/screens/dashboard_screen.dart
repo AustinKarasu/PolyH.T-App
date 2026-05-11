@@ -3,12 +3,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/test_paper.dart';
 import '../providers/auth_provider.dart';
 import '../services/test_service.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/update_button.dart';
-import 'admin_accounts_screen.dart';
-import 'security_log_screen.dart';
 import 'upload_test_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -30,56 +30,109 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PolyH.T Admin'),
-        actions: [
-          const UpdateButton(),
-          IconButton(
-            tooltip: 'Admins',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminAccountsScreen())),
-            icon: const Icon(Icons.admin_panel_settings_outlined),
+      drawer: const AppDrawer(),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxScrolled) => [
+          SliverAppBar(
+            expandedHeight: 180,
+            floating: false,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              background: Container(
+                decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.asset('assets/images/college_logo.png', width: 44, height: 44, fit: BoxFit.cover),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Welcome, ${auth.user?.fullName ?? 'Admin'}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Manage house test papers & schedules',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.75),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              const UpdateButton(),
+            ],
           ),
-          IconButton(
-            tooltip: 'Exam logs',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SecurityLogScreen())),
-            icon: const Icon(Icons.shield_outlined),
-          ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: context.read<AuthProvider>().logout,
-            icon: const Icon(Icons.logout),
-          )
         ],
+        body: RefreshIndicator(
+          color: AppTheme.primary,
+          onRefresh: () async => setState(() => _tests = _service.fetchTests()),
+          child: FutureBuilder<List<TestPaper>>(
+            future: _tests,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+              }
+              if (snapshot.hasError) {
+                return _EmptyState(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Connection error',
+                  subtitle: 'Could not load tests. Pull to refresh.',
+                );
+              }
+              final tests = snapshot.data ?? [];
+              if (tests.isEmpty) {
+                return _EmptyState(
+                  icon: Icons.quiz_outlined,
+                  title: 'No tests yet',
+                  subtitle: 'Tap the button below to upload your first house test PDF.',
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                itemCount: tests.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => _TestCard(
+                  test: tests[index],
+                  onChanged: () => setState(() => _tests = _service.fetchTests()),
+                ),
+              );
+            },
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openUpload,
-        icon: const Icon(Icons.upload_file),
+        icon: const Icon(Icons.upload_file_rounded),
         label: const Text('Upload PDF'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => setState(() => _tests = _service.fetchTests()),
-        child: FutureBuilder<List<TestPaper>>(
-          future: _tests,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final tests = snapshot.data ?? [];
-            if (tests.isEmpty) {
-              return const Center(child: Text('No scheduled tests yet.'));
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: tests.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _TestCard(
-                test: tests[index],
-                onChanged: () => setState(() => _tests = _service.fetchTests()),
-              ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -90,52 +143,170 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+// ── Empty state widget ──────────────────────────────────────────────
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.icon, required this.title, required this.subtitle});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        const SizedBox(height: 100),
+        Icon(icon, size: 72, color: AppTheme.primaryLight.withValues(alpha: 0.4)),
+        const SizedBox(height: 16),
+        Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.5)),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Test card widget ─────────────────────────────────────────────────
 class _TestCard extends StatelessWidget {
   const _TestCard({required this.test, required this.onChanged});
 
   final TestPaper test;
   final VoidCallback onChanged;
 
+  Color get _statusColor => test.isActive ? AppTheme.success : AppTheme.error;
+
   @override
   Widget build(BuildContext context) {
     final format = DateFormat('dd MMM, hh:mm a');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                child: Text(test.branchName.substring(0, 1)),
-              ),
-              title: Text(test.title),
-              subtitle: Text('${test.branchName} | ${format.format(test.scheduledStart)} | ${test.timeLimitMinutes} min'),
-              trailing: Chip(label: Text(test.isActive ? 'Active' : 'Hidden')),
-            ),
-            Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.primaryLight.withValues(alpha: 0.1)),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        children: [
+          // ── Header row ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _replacePdf(context),
-                    icon: const Icon(Icons.swap_horiz),
-                    label: const Text('Re-upload'),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.headerGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      test.branchName.substring(0, 2).toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        test.title,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${test.branchName}  •  ${test.timeLimitMinutes} min',
+                        style: TextStyle(fontSize: 12, color: AppTheme.ink.withValues(alpha: 0.5)),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        test.isActive ? 'Active' : 'Hidden',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _statusColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Schedule info ──
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 16, color: AppTheme.ink.withValues(alpha: 0.4)),
+                const SizedBox(width: 8),
+                Text(
+                  '${format.format(test.scheduledStart)} — ${format.format(test.scheduledEnd)}',
+                  style: TextStyle(fontSize: 12, color: AppTheme.ink.withValues(alpha: 0.6)),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Actions ──
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _replacePdf(context),
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                    label: const Text('Re-upload'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _delete(context),
-                    icon: const Icon(Icons.delete_outline),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.error,
+                      side: BorderSide(color: AppTheme.error.withValues(alpha: 0.3)),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     label: const Text('Remove'),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -153,10 +324,14 @@ class _TestCard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove PDF test?'),
-        content: Text(test.title),
+        content: Text('Are you sure you want to remove "${test.title}"?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Remove')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
         ],
       ),
     );

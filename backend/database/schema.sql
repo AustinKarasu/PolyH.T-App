@@ -35,6 +35,17 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('admin', 'student') NOT NULL,
   branch_id INT NULL,
+  dob DATE NULL,
+  semester TINYINT NULL,
+  roll_no VARCHAR(40) NULL,
+  board_roll_no VARCHAR(40) NULL,
+  college_name VARCHAR(200) NULL DEFAULT 'Govt. Polytechnic Kangra',
+  course_name VARCHAR(120) NULL,
+  guardian_name VARCHAR(120) NULL,
+  phone VARCHAR(20) NULL,
+  address TEXT NULL,
+  admission_year YEAR NULL,
+  photo_url VARCHAR(500) NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -138,5 +149,5 @@ INSERT INTO branches (name, code) VALUES
   ('Electrical Engg', 'EE'),
   ('Instrumental Engg', 'IE'),
   ('Electronic Engg', 'EC'),
-  ('Civil Engg', 'CE')
+  ('Civil Engg', 'CV')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
