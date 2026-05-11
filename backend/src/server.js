@@ -1,6 +1,4 @@
 const app = require('./app');
-const { env } = require('./config/env');
 
-app.listen(env.port, () => {
-  console.log(`PolyH.T API running on port ${env.port}`);
-});
+// Export for Vercel serverless
+module.exports = app;

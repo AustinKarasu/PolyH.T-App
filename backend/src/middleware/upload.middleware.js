@@ -4,8 +4,9 @@ const multer = require('multer');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
 
-const uploadPath = path.resolve(env.uploadDir);
-fs.mkdirSync(uploadPath, { recursive: true });
+// Use /tmp on Vercel (only writable dir), or configured uploadDir locally
+const uploadPath = process.env.VERCEL ? '/tmp' : path.resolve(env.uploadDir);
+try { fs.mkdirSync(uploadPath, { recursive: true }); } catch (_) { /* read-only fs */ }
 
 const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadPath),

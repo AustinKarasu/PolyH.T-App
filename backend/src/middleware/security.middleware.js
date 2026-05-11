@@ -24,7 +24,7 @@ const authLimiter = rateLimit({
 function corsMiddleware() {
   return cors({
     origin(origin, callback) {
-      if (!origin || env.corsOrigins.length === 0 || env.corsOrigins.includes(origin)) {
+      if (!origin || env.corsOrigins.length === 0 || env.corsOrigins.includes('*') || env.corsOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new ApiError(403, 'Origin is not allowed'));
