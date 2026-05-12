@@ -87,7 +87,14 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
-    if (ok != true || !context.mounted) {
+    if (ok != true) {
+      current.dispose();
+      next.dispose();
+      confirm.dispose();
+      code.dispose();
+      return;
+    }
+    if (!context.mounted) {
       current.dispose();
       next.dispose();
       confirm.dispose();
