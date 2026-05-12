@@ -47,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final showTotp = _showTotp || auth.requiresTwoFactor;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -167,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 onFieldSubmitted: (_) => _submit(),
                                 validator: (value) => value == null || value.length < 6 ? 'Minimum 6 characters' : null,
                               ),
-                              if (_showTotp) ...[
+                              if (showTotp) ...[
                                 const SizedBox(height: 16),
                                 TextFormField(
                                   controller: _totpController,
@@ -176,7 +177,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     labelText: '2FA code',
                                     prefixIcon: Icon(Icons.verified_user_outlined),
                                   ),
-                                  validator: (value) => _showTotp && (value == null || value.trim().length < 6) ? 'Enter your authenticator code' : null,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
+                                  validator: (value) => showTotp && (value == null || value.trim().length < 6) ? 'Enter your authenticator code' : null,
                                 ),
                               ],
                               const SizedBox(height: 8),
@@ -214,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           height: 22,
                                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                                         )
-                                      : const Text('Sign in'),
+                                      : Text(showTotp ? 'Verify & sign in' : 'Sign in'),
                                 ),
                               ),
                             ],
@@ -245,12 +248,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     await auth.login(
-          _collegeIdController.text.trim(),
-          _passwordController.text,
-          totpCode: _totpController.text.trim(),
-        );
-    if (mounted && auth.error?.contains('2FA code required') == true) {
-      setState(() => _showTotp = true);
+      _collegeIdController.text.trim(),
+      _passwordController.text,
+      totpCode: _totpController.text.trim(),
+    );
+    if (mounted && auth.requiresTwoFactor) {
+      setState(() {
+        _showTotp = true;
+        _totpController.clear();
+      });
     }
   }
 }

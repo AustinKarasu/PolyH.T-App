@@ -32,8 +32,11 @@ async function login(identifier, password, context = {}) {
   }
 
   if (user.two_factor_enabled) {
-    if (!context.totpCode || !verifyTotp(context.totpCode, user.two_factor_secret)) {
-      return { requiresTwoFactor: true, user: sanitizeUser(user) };
+    if (!context.totpCode) {
+      return { requiresTwoFactor: true, message: 'Authenticator code required' };
+    }
+    if (!verifyTotp(context.totpCode, user.two_factor_secret)) {
+      return { requiresTwoFactor: true, message: 'Invalid authenticator code' };
     }
   }
 

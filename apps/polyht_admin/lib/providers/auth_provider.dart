@@ -10,6 +10,7 @@ class AuthProvider extends ChangeNotifier {
 
   AppUser? user;
   bool isLoading = true;
+  bool requiresTwoFactor = false;
   String? error;
 
   bool get isAuthenticated => user != null;
@@ -23,9 +24,11 @@ class AuthProvider extends ChangeNotifier {
     }
     try {
       user = await _authService.me();
+      requiresTwoFactor = false;
     } catch (_) {
       await _tokenStorage.clear();
       user = null;
+      requiresTwoFactor = false;
     }
     isLoading = false;
     notifyListeners();
@@ -34,9 +37,16 @@ class AuthProvider extends ChangeNotifier {
   Future<void> login(String identifier, String password, {String? totpCode}) async {
     isLoading = true;
     error = null;
+    if (totpCode != null && totpCode.trim().isNotEmpty) {
+      requiresTwoFactor = false;
+    }
     notifyListeners();
     try {
       user = await _authService.login(identifier, password, totpCode: totpCode);
+      requiresTwoFactor = false;
+    } on TwoFactorRequiredException catch (err) {
+      requiresTwoFactor = true;
+      error = err.toString();
     } catch (err) {
       error = err.toString();
     } finally {
@@ -48,6 +58,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     user = null;
+    requiresTwoFactor = false;
+    error = null;
     notifyListeners();
   }
 

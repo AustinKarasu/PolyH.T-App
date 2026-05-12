@@ -2,6 +2,15 @@ import '../models/app_user.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
 
+class TwoFactorRequiredException implements Exception {
+  const TwoFactorRequiredException([this.message = 'Enter your authenticator code to continue.']);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AuthService {
   AuthService({ApiClient? apiClient, TokenStorage? tokenStorage})
       : _apiClient = apiClient ?? ApiClient(),
@@ -17,7 +26,7 @@ class AuthService {
       if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode,
     });
     if (data['requiresTwoFactor'] == true) {
-      throw Exception('2FA code required');
+      throw TwoFactorRequiredException(data['message']?.toString() ?? 'Enter your authenticator code to continue.');
     }
     final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
     if (user.role != 'admin') {
