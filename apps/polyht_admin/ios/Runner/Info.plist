@@ -8,6 +8,10 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>PolyH.T Admin</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PolyH.T Admin lets you choose a profile photo from your library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PolyH.T Admin may use the camera when selecting a profile photo.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -62,6 +62,19 @@ async function listStudentTests(user) {
 }
 
 async function listStudentHistory(user) {
+  await query(
+    `DELETE FROM exam_events
+     WHERE student_id = $1
+       AND test_id IN (SELECT id FROM tests WHERE scheduled_end < CURRENT_TIMESTAMP - INTERVAL '30 days')`,
+    [user.sub]
+  );
+  await query(
+    `DELETE FROM test_attempts
+     WHERE student_id = $1
+       AND test_id IN (SELECT id FROM tests WHERE scheduled_end < CURRENT_TIMESTAMP - INTERVAL '30 days')`,
+    [user.sub]
+  );
+
   const tests = await query(
     `SELECT t.id, t.title, t.pdf_original_name, t.pdf_size, t.semester,
             t.scheduled_start, t.scheduled_end, t.time_limit_minutes,
@@ -80,6 +93,7 @@ async function listStudentHistory(user) {
      WHERE t.branch_id = $2
        AND t.semester = $3
        AND t.scheduled_end < CURRENT_TIMESTAMP
+       AND t.scheduled_end >= CURRENT_TIMESTAMP - INTERVAL '30 days'
      ORDER BY t.scheduled_end DESC, t.scheduled_start DESC`,
     [user.sub, user.branchId, user.semester]
   );

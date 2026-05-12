@@ -5,8 +5,12 @@ const { query } = require('../config/db');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
 const storageService = require('./storage.service');
+const recaptchaService = require('./recaptcha.service');
 
 async function login(identifier, password, context = {}) {
+  await recaptchaService.verifyRecaptcha(context.recaptchaToken, context.ipAddress);
+  await assertLoginAllowed(identifier, context.ipAddress);
+
   const rows = await query(
     `SELECT u.id, u.full_name, u.email, u.college_id, u.password_hash, u.role,
             u.branch_id, u.is_active, u.dob, u.semester, u.roll_no, u.board_roll_no,
@@ -23,11 +27,13 @@ async function login(identifier, password, context = {}) {
 
   const user = rows[0];
   if (!user || !user.is_active) {
+    await recordLoginFailure(identifier, context.ipAddress);
     throw new ApiError(401, 'Invalid credentials');
   }
 
   const matches = await bcrypt.compare(password, user.password_hash);
   if (!matches) {
+    await recordLoginFailure(identifier, context.ipAddress);
     throw new ApiError(401, 'Invalid credentials');
   }
 
@@ -36,6 +42,7 @@ async function login(identifier, password, context = {}) {
       return { requiresTwoFactor: true, message: 'Authenticator code required' };
     }
     if (!verifyTotp(context.totpCode, user.two_factor_secret)) {
+      await recordLoginFailure(identifier, context.ipAddress);
       return { requiresTwoFactor: true, message: 'Invalid authenticator code' };
     }
   }
@@ -53,6 +60,7 @@ async function login(identifier, password, context = {}) {
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [user.id, jti, context.deviceLabel || null, context.ipAddress || null, context.userAgent || null, new Date(decoded.exp * 1000).toISOString()]
   );
+  await clearLoginFailures(identifier, context.ipAddress);
 
   return { token, user: sanitizeUser(user) };
 }
@@ -172,6 +180,56 @@ function sanitizeUser(user) {
   delete copy.password_hash;
   delete copy.two_factor_secret;
   return copy;
+}
+
+function loginFailureKey(identifier) {
+  return crypto.createHash('sha256').update(String(identifier || '').trim().toLowerCase()).digest('hex');
+}
+
+async function assertLoginAllowed(identifier, ipAddress = '') {
+  const rows = await query(
+    `SELECT locked_until
+     FROM login_failures
+     WHERE identifier_hash = $1 AND ip_address = $2
+       AND locked_until IS NOT NULL AND locked_until > CURRENT_TIMESTAMP
+     LIMIT 1`,
+    [loginFailureKey(identifier), ipAddress || 'unknown']
+  );
+  if (rows[0]) {
+    throw new ApiError(429, 'Too many failed login attempts. Try again after 15 minutes.');
+  }
+}
+
+async function recordLoginFailure(identifier, ipAddress = '') {
+  await query(
+    `INSERT INTO login_failures (identifier_hash, ip_address, failed_count, locked_until)
+     VALUES ($1, $2, 1, NULL)
+     ON CONFLICT (identifier_hash, ip_address)
+     DO UPDATE SET
+       failed_count = CASE
+         WHEN login_failures.last_failed_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes' THEN 1
+         ELSE login_failures.failed_count + 1
+       END,
+       first_failed_at = CASE
+         WHEN login_failures.last_failed_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes' THEN CURRENT_TIMESTAMP
+         ELSE login_failures.first_failed_at
+       END,
+       last_failed_at = CURRENT_TIMESTAMP,
+       locked_until = CASE
+         WHEN login_failures.last_failed_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+              AND login_failures.failed_count + 1 >= 5
+           THEN CURRENT_TIMESTAMP + INTERVAL '15 minutes'
+         ELSE login_failures.locked_until
+       END`,
+    [loginFailureKey(identifier), ipAddress || 'unknown']
+  );
+}
+
+async function clearLoginFailures(identifier, ipAddress = '') {
+  await query(
+    'DELETE FROM login_failures WHERE identifier_hash = $1 AND ip_address = $2',
+    [loginFailureKey(identifier), ipAddress || 'unknown']
+  );
 }
 
 module.exports = {

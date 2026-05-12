@@ -51,6 +51,20 @@ async function ensureRuntimeSchema() {
       ALTER TABLE exam_events
         ADD CONSTRAINT exam_events_test_id_fkey
           FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE;
+
+      CREATE TABLE IF NOT EXISTS login_failures (
+        id SERIAL PRIMARY KEY,
+        identifier_hash VARCHAR(64) NOT NULL,
+        ip_address VARCHAR(64) NOT NULL,
+        failed_count INT NOT NULL DEFAULT 1,
+        first_failed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_failed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        locked_until TIMESTAMPTZ,
+        UNIQUE(identifier_hash, ip_address)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_login_failures_locked
+        ON login_failures (identifier_hash, ip_address, locked_until);
     `).catch((err) => {
       runtimeSchemaReady = null;
       throw err;

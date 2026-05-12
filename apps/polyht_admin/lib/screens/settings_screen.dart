@@ -33,13 +33,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           ListTile(
-            leading: CircleAvatar(
-              backgroundImage: profileImageProvider(user.photoUrl, ApiConfig.baseUrl),
-              child: user.photoUrl == null ? Text(user.fullName[0].toUpperCase()) : null,
+            leading: InkWell(
+              onTap: _saving ? null : _pickPhoto,
+              customBorder: const CircleBorder(),
+              child: CircleAvatar(
+                backgroundImage: profileImageProvider(user.photoUrl, ApiConfig.baseUrl),
+                child: user.photoUrl == null ? Text(user.fullName[0].toUpperCase()) : null,
+              ),
             ),
             title: Text(user.fullName),
             subtitle: Text(user.email ?? 'Administrator'),
-            trailing: IconButton(icon: const Icon(Icons.camera_alt_rounded), onPressed: _saving ? null : _pickPhoto),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(onPressed: _saving ? null : _editProfile, icon: const Icon(Icons.edit_rounded), label: const Text('Edit Profile')),

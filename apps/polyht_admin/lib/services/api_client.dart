@@ -173,7 +173,14 @@ class ApiClient {
 
   String _messageFromBody(dynamic body) {
     if (body is Map && body['message'] != null) return body['message'].toString();
-    if (body is String && body.trim().isNotEmpty) return body.trim();
+    if (body is String && body.trim().isNotEmpty) {
+      final text = body.trim();
+      final lower = text.toLowerCase();
+      if (lower.startsWith('<!doctype') || lower.startsWith('<html')) {
+        return 'Server returned an HTML error page. Please update the app and try again.';
+      }
+      return text.length > 240 ? '${text.substring(0, 240)}...' : text;
+    }
     return 'Request failed';
   }
 

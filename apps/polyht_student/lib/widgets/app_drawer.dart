@@ -5,6 +5,7 @@ import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/history_screen.dart';
+import '../screens/info_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/settings_screen.dart';
 
@@ -115,6 +116,14 @@ class AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).pop();
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                  },
+                ),
+                _DrawerItem(
+                  icon: Icons.info_outline_rounded,
+                  label: 'App Info',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InfoScreen()));
                   },
                 ),
                 const Divider(height: 24),

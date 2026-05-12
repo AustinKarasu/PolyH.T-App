@@ -5,6 +5,7 @@ async function login(req, res, next) {
     const result = await authService.login(req.body.identifier, req.body.password, {
       deviceLabel: req.body.deviceLabel,
       totpCode: req.body.totpCode,
+      recaptchaToken: req.body.recaptchaToken,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
