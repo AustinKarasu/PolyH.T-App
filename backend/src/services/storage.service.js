@@ -39,6 +39,12 @@ async function savePdf(file) {
 }
 
 async function saveProfilePhoto(file) {
+  const contentType = file.mimetype || contentTypeForName(file.originalname) || 'application/octet-stream';
+  const bytes = file.buffer || await fs.readFile(file.path);
+  if (contentType.startsWith('image/')) {
+    return `data:${contentType};base64,${bytes.toString('base64')}`;
+  }
+
   if (env.storage.driver === 's3') {
     if (!env.storage.s3.bucket) {
       throw new ApiError(500, 'S3 bucket is not configured');
@@ -47,8 +53,8 @@ async function saveProfilePhoto(file) {
     await getS3Client().send(new PutObjectCommand({
       Bucket: env.storage.s3.bucket,
       Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype || 'application/octet-stream'
+      Body: bytes,
+      ContentType: contentType
     }));
     if (env.storage.s3.publicBaseUrl) {
       return `${env.storage.s3.publicBaseUrl.replace(/\/$/, '')}/${key}`;
@@ -95,6 +101,14 @@ async function getPdfDelivery(filePathOrKey) {
 
 function safeName(name) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+function contentTypeForName(name) {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return null;
 }
 
 module.exports = { savePdf, saveProfilePhoto, deletePdf, getPdfDelivery };

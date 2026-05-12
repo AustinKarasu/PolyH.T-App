@@ -1,0 +1,2 @@
+ALTER TABLE users
+  ALTER COLUMN photo_url TYPE TEXT;

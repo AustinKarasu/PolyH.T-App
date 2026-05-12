@@ -55,7 +55,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _photoUrl(String value) => value.startsWith('http') ? value : '${ApiConfig.baseUrl.replaceFirst(RegExp(r'/api$'), '')}$value';
+  String _photoUrl(String value) => value.startsWith('http') || value.startsWith('data:')
+      ? value
+      : '${ApiConfig.baseUrl.replaceFirst(RegExp(r'/api$'), '')}$value';
 
   Future<void> _pickPhoto() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);

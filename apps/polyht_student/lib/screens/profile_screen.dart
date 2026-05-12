@@ -152,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _photoUrl(String value) {
-    if (value.startsWith('http')) return value;
+    if (value.startsWith('http') || value.startsWith('data:')) return value;
     final base = ApiConfig.baseUrl.replaceFirst(RegExp(r'/api$'), '');
     return '$base$value';
   }

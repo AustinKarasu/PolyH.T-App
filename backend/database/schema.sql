@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR(20),
   address TEXT,
   admission_year INT,
-  photo_url VARCHAR(500),
+  photo_url TEXT,
   two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   two_factor_secret VARCHAR(160),
   is_primary_admin BOOLEAN NOT NULL DEFAULT FALSE,

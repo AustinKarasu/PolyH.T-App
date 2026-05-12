@@ -157,6 +157,7 @@ async function adminUpdateStudent(studentId, patch) {
   if (sets.length === 0) throw new ApiError(422, 'No valid fields to update');
 
   params.push(studentId);
+  await getStudentById(studentId);
   try {
     await query(
       `UPDATE users SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx} AND role = 'student'`,
