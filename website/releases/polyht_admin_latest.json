@@ -1,8 +1,8 @@
 {
   "appId": "polyht_admin",
-  "latestVersion": "1.0.4",
-  "latestBuild": 14,
+  "latestVersion": "1.0.7",
+  "latestBuild": 17,
   "mandatory": true,
-  "releaseNotes": "Security update required. This build adds enforced updates, 2FA, profile security, and exam-mode improvements.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.4/polyht-admin-v1.0.4+14.apk"
+  "releaseNotes": "Required stability update: fixes profile photo sync, student validation, test controls, QR-based 2FA setup, and in-app APK installer handoff.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.7/polyht-admin-v1.0.7+17.apk"
 }

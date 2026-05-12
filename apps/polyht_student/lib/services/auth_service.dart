@@ -49,7 +49,7 @@ class AuthService {
     String? guardianName,
     String? address,
   }) async {
-    final data = await _apiClient.patch('/auth/me', {
+    final data = await _apiClient.patch('/students/me', {
       if (fullName != null) 'fullName': fullName,
       if (email != null) 'email': email,
       if (phone != null) 'phone': phone,
@@ -61,7 +61,7 @@ class AuthService {
 
   Future<AppUser> uploadProfilePhoto(String imagePath) async {
     final data = await _apiClient.uploadProfilePhoto(imagePath);
-    return AppUser.fromJson(data['user'] as Map<String, dynamic>);
+    return AppUser.fromJson(data['student'] as Map<String, dynamic>);
   }
 
   Future<Map<String, dynamic>> setupTwoFactor() async {

@@ -62,6 +62,24 @@ async function updateTest(id, patch) {
   return getTestById(id);
 }
 
+async function setTestActive(id, isActive) {
+  await getTestById(id);
+  await query(
+    'UPDATE tests SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+    [isActive, id]
+  );
+  return getTestById(id);
+}
+
+async function endTestNow(id) {
+  await getTestById(id);
+  await query(
+    'UPDATE tests SET scheduled_end = CURRENT_TIMESTAMP, is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+    [id]
+  );
+  return getTestById(id);
+}
+
 async function replacePdf(id, file) {
   if (!file) throw new ApiError(422, 'PDF file is required');
   const existing = await getTestById(id);
@@ -98,4 +116,4 @@ function statusForTest(test) {
   return 'live';
 }
 
-module.exports = { createTest, listAdminTests, listStudentTests, updateTest, replacePdf, removeTest, getStudentPdf };
+module.exports = { createTest, listAdminTests, listStudentTests, updateTest, setTestActive, endTestNow, replacePdf, removeTest, getStudentPdf };

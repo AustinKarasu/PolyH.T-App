@@ -81,6 +81,18 @@ Admin only. Multipart form data:
 
 Admin only. Updates title, branch, schedule, time limit, and active state.
 
+`PATCH /tests/:id/active`
+
+Admin only. Cancels or reactivates a test without changing the schedule or PDF.
+
+```json
+{ "isActive": false }
+```
+
+`POST /tests/:id/end`
+
+Admin only. Ends the test immediately and hides it from student access.
+
 `PUT /tests/:id/pdf`
 
 Admin only. Multipart field `pdf`; replaces the current PDF.

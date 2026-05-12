@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
@@ -43,13 +44,23 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Enable 2FA'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Add this secret to your authenticator app, then enter the generated code.'),
-          const SizedBox(height: 12),
-          SelectableText(setup['secret'] as String),
-          const SizedBox(height: 12),
-          TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
-        ]),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Scan the QR code with your authenticator app, then enter the generated code.'),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(12),
+                child: QrImageView(data: setup['otpauthUrl'] as String, size: 190),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(setup['secret'] as String),
+            const SizedBox(height: 12),
+            TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+          ]),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Enable')),

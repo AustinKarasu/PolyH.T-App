@@ -44,6 +44,24 @@ async function updateTest(req, res, next) {
   }
 }
 
+async function setTestActive(req, res, next) {
+  try {
+    const test = await testService.setTestActive(Number(req.params.id), req.body.isActive === true);
+    res.json({ test });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function endTestNow(req, res, next) {
+  try {
+    const test = await testService.endTestNow(Number(req.params.id));
+    res.json({ test });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function replacePdf(req, res, next) {
   try {
     const test = await testService.replacePdf(Number(req.params.id), req.file);
@@ -81,6 +99,8 @@ module.exports = {
   createTest,
   listTests,
   updateTest,
+  setTestActive,
+  endTestNow,
   replacePdf,
   removeTest,
   downloadPdf

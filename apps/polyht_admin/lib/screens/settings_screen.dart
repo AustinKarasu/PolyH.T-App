@@ -1,10 +1,12 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
+import '../utils/photo_image.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,7 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: user.photoUrl == null ? null : NetworkImage(_photoUrl(user.photoUrl!)),
+              backgroundImage: profileImageProvider(user.photoUrl, ApiConfig.baseUrl),
               child: user.photoUrl == null ? Text(user.fullName[0].toUpperCase()) : null,
             ),
             title: Text(user.fullName),
@@ -54,10 +56,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-  String _photoUrl(String value) => value.startsWith('http') || value.startsWith('data:')
-      ? value
-      : '${ApiConfig.baseUrl.replaceFirst(RegExp(r'/api$'), '')}$value';
 
   Future<void> _pickPhoto() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
@@ -116,13 +114,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Enable 2FA'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Add this secret to your authenticator app, then enter the generated code.'),
-          const SizedBox(height: 12),
-          SelectableText(setup['secret'] as String),
-          const SizedBox(height: 12),
-          TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
-        ]),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Scan the QR code with your authenticator app, then enter the generated code.'),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(12),
+                child: QrImageView(data: setup['otpauthUrl'] as String, size: 190),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(setup['secret'] as String),
+            const SizedBox(height: 12),
+            TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+          ]),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Enable')),

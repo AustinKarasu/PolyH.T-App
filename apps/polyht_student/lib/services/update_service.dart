@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../config/update_config.dart';
 
@@ -45,9 +47,16 @@ class UpdateService {
   }
 
   Future<void> openDownload(AppUpdate update) async {
-    final uri = Uri.parse(update.downloadUrl);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Unable to open APK download');
+    final response = await http.get(Uri.parse(update.downloadUrl));
+    if (response.statusCode >= 400 || response.bodyBytes.isEmpty) {
+      throw Exception('Unable to download APK update');
+    }
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/polyht_student_${update.latestVersion}_${update.latestBuild}.apk');
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+    final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
+    if (result.type != ResultType.done) {
+      throw Exception(result.message);
     }
   }
 }

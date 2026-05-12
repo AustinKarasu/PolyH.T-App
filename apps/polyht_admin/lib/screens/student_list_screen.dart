@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
+import '../config/api_config.dart';
 import '../config/app_theme.dart';
 import '../models/app_user.dart';
 import '../models/branch.dart';
 import '../services/student_service.dart';
 import '../services/test_service.dart';
+import '../utils/photo_image.dart';
 
 class StudentListScreen extends StatefulWidget {
   const StudentListScreen({super.key});
@@ -328,9 +330,18 @@ class _StudentTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(gradient: AppTheme.headerGradient, borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text(student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18))),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: student.photoUrl == null ? AppTheme.headerGradient : null,
+                borderRadius: BorderRadius.circular(12),
+                image: student.photoUrl == null
+                    ? null
+                    : DecorationImage(image: profileImageProvider(student.photoUrl, ApiConfig.baseUrl)!, fit: BoxFit.cover),
+              ),
+              child: student.photoUrl == null
+                  ? Center(child: Text(student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)))
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -401,10 +412,13 @@ class _StudentDetailScreenState extends State<_StudentDetailScreen> {
               width: double.infinity, padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(gradient: AppTheme.headerGradient, borderRadius: BorderRadius.circular(AppTheme.radiusXl)),
               child: Column(children: [
-                Container(
-                  width: 72, height: 72,
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2)),
-                  child: Center(child: Text(student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white))),
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  backgroundImage: profileImageProvider(student.photoUrl, ApiConfig.baseUrl),
+                  child: student.photoUrl == null
+                      ? Text(student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white))
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 Text(student.fullName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
@@ -581,6 +595,36 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
 
   String? _required(String? value) => value == null || value.trim().isEmpty ? 'Required' : null;
   int? _optionalInt(TextEditingController controller) => controller.text.trim().isEmpty ? null : int.tryParse(controller.text.trim());
+  String? _optionalEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty || email.contains('@')) return null;
+    return 'Enter a valid email';
+  }
+
+  String? _optionalSemester(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final semester = int.tryParse(text);
+    return semester != null && semester >= 1 && semester <= 8 ? null : 'Enter 1 to 8';
+  }
+
+  String? _optionalAdmissionYear(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final year = int.tryParse(text);
+    return year != null && year >= 2000 && year <= 2100 ? null : 'Enter a valid year';
+  }
+
+  String? _optionalStrongPassword(String? value) {
+    final password = value ?? '';
+    if (password.isEmpty) return null;
+    if (password.length < 8) return 'Use at least 8 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'Add an uppercase letter';
+    if (!RegExp(r'[a-z]').hasMatch(password)) return 'Add a lowercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(password)) return 'Add a number';
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) return 'Add a symbol';
+    return null;
+  }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate() || _selectedBranch == null) return;
@@ -643,7 +687,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
                   validator: (value) => value == null ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'New password (optional)')),
+                TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'New password (optional)'), validator: _optionalStrongPassword),
                 const SizedBox(height: 12),
                 SwitchListTile(
                   value: _isActive,
@@ -652,9 +696,9 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email')),
+                TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: _optionalEmail),
                 const SizedBox(height: 12),
-                TextFormField(controller: _semesterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Semester')),
+                TextFormField(controller: _semesterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Semester'), validator: _optionalSemester),
                 const SizedBox(height: 12),
                 TextFormField(controller: _rollNoController, decoration: const InputDecoration(labelText: 'Roll no')),
                 const SizedBox(height: 12),
@@ -666,7 +710,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
                 const SizedBox(height: 12),
                 TextFormField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
                 const SizedBox(height: 12),
-                TextFormField(controller: _admissionYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Admission year')),
+                TextFormField(controller: _admissionYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Admission year'), validator: _optionalAdmissionYear),
                 const SizedBox(height: 12),
                 TextFormField(controller: _addressController, maxLines: 3, decoration: const InputDecoration(labelText: 'Address')),
                 const SizedBox(height: 24),

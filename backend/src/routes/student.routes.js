@@ -66,8 +66,8 @@ router.patch(
   authenticate,
   requireRole('admin'),
   [
-    body('fullName').optional().trim().isLength({ min: 2, max: 120 }),
-    body('collegeId').optional().trim().isLength({ min: 2, max: 60 }),
+    body('fullName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 2, max: 120 }),
+    body('collegeId').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 2, max: 60 }),
     body('email').optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail(),
     body('dob').optional({ nullable: true, checkFalsy: true }).isISO8601(),
     body('semester').optional({ nullable: true, checkFalsy: true }).isInt({ min: 1, max: 8 }),

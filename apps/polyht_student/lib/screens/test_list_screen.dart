@@ -101,10 +101,11 @@ class _TestListScreenState extends State<TestListScreen> {
                 return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
               }
               if (snapshot.hasError) {
+                final message = snapshot.error.toString().replaceFirst('Exception: ', '');
                 return _buildEmpty(
                   Icons.cloud_off_rounded,
                   'Connection error',
-                  'Could not load tests. Pull to refresh.',
+                  '$message. Pull to refresh.',
                 );
               }
               final tests = snapshot.data ?? [];
@@ -187,9 +188,12 @@ class _StudentTestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final format = DateFormat('dd MMM, hh:mm a');
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? AppTheme.ink;
+    final muted = textColor.withValues(alpha: 0.6);
+    final scheduleBg = Theme.of(context).brightness == Brightness.dark ? AppTheme.darkSurface : AppTheme.surface;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: test.isLive && !test.isLocked
@@ -243,23 +247,23 @@ class _StudentTestCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: scheduleBg,
               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: Row(
               children: [
-                Icon(Icons.schedule_rounded, size: 14, color: AppTheme.ink.withValues(alpha: 0.4)),
+                Icon(Icons.schedule_rounded, size: 14, color: muted),
                 const SizedBox(width: 8),
                 Text(
                   '${format.format(test.scheduledStart)} — ${format.format(test.scheduledEnd)}',
-                  style: TextStyle(fontSize: 12, color: AppTheme.ink.withValues(alpha: 0.6)),
+                  style: TextStyle(fontSize: 12, color: muted),
                 ),
                 const Spacer(),
-                Icon(Icons.timer_outlined, size: 14, color: AppTheme.ink.withValues(alpha: 0.4)),
+                Icon(Icons.timer_outlined, size: 14, color: muted),
                 const SizedBox(width: 4),
                 Text(
                   '${test.timeLimitMinutes} min',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.ink.withValues(alpha: 0.6)),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: muted),
                 ),
               ],
             ),

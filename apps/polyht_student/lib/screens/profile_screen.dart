@@ -1,10 +1,12 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
+import '../utils/photo_image.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -56,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         CircleAvatar(
                           radius: 42,
                           backgroundColor: Colors.white.withValues(alpha: 0.2),
-                          backgroundImage: user.photoUrl == null ? null : NetworkImage(_photoUrl(user.photoUrl!)),
+                          backgroundImage: profileImageProvider(user.photoUrl, ApiConfig.baseUrl),
                           child: user.photoUrl == null
                               ? Text(
                                   user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
@@ -149,12 +151,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
       child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
     );
-  }
-
-  String _photoUrl(String value) {
-    if (value.startsWith('http') || value.startsWith('data:')) return value;
-    final base = ApiConfig.baseUrl.replaceFirst(RegExp(r'/api$'), '');
-    return '$base$value';
   }
 
   Future<void> _pickPhoto(BuildContext context) async {
@@ -252,7 +248,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Enable 2FA'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Add this secret to Google Authenticator, Microsoft Authenticator, or any TOTP app, then enter the 6-digit code.'),
+            const Text('Scan the QR code with Google Authenticator, Microsoft Authenticator, or any TOTP app, then enter the 6-digit code.'),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(12),
+                child: QrImageView(data: setup['otpauthUrl'] as String, size: 190),
+              ),
+            ),
             const SizedBox(height: 12),
             SelectableText(setup['secret'] as String),
             const SizedBox(height: 12),

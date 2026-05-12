@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../models/admin_account.dart';
@@ -184,7 +185,15 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
         title: const Text('Enable 2FA'),
         content: SingleChildScrollView(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            const Text('Add this secret to an authenticator app, then enter the 6-digit code.'),
+            const Text('Scan the QR code with an authenticator app, then enter the 6-digit code.'),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(12),
+                child: QrImageView(data: setup['otpauthUrl'] as String, size: 190),
+              ),
+            ),
             const SizedBox(height: 12),
             SelectableText(setup['secret'] as String),
             const SizedBox(height: 12),

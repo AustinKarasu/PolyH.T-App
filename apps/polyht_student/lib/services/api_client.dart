@@ -55,7 +55,7 @@ class ApiClient {
   }
 
   Future<dynamic> uploadProfilePhoto(String imagePath) async {
-    final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}/auth/me/photo'));
+    final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}/students/me/photo'));
     request.headers.addAll(await _headers(jsonBody: false));
     request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
     final streamed = await request.send();

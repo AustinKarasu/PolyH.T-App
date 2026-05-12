@@ -45,6 +45,14 @@ class TestService {
     await _apiClient.delete('/tests/$testId');
   }
 
+  Future<void> setTestActive({required int testId, required bool isActive}) async {
+    await _apiClient.patch('/tests/$testId/active', {'isActive': isActive});
+  }
+
+  Future<void> endTestNow(int testId) async {
+    await _apiClient.postEmpty('/tests/$testId/end');
+  }
+
   Future<List<ExamEvent>> fetchEvents({int? branchId}) async {
     final query = branchId == null ? '' : '?branchId=$branchId';
     final data = await _apiClient.get('/attempts/admin/events$query');

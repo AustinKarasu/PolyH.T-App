@@ -35,6 +35,22 @@ router.put(
   testController.updateTest
 );
 
+router.patch(
+  '/:id/active',
+  authenticate,
+  requireRole('admin'),
+  [body('isActive').isBoolean()],
+  validate,
+  testController.setTestActive
+);
+
+router.post(
+  '/:id/end',
+  authenticate,
+  requireRole('admin'),
+  testController.endTestNow
+);
+
 router.put(
   '/:id/pdf',
   authenticate,

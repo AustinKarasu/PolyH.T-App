@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -63,18 +63,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 children: [
                                   Text(
                                     'Welcome, ${auth.user?.fullName ?? 'Admin'}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
                                   ),
                                   Text(
-                                    'Manage house test papers & schedules',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.white.withValues(alpha: 0.75),
-                                    ),
+                                    'Manage house test papers and schedules',
+                                    style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.75)),
                                   ),
                                 ],
                               ),
@@ -87,9 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            actions: [
-              const UpdateButton(),
-            ],
+            actions: const [UpdateButton()],
           ),
         ],
         body: RefreshIndicator(
@@ -102,15 +93,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
               }
               if (snapshot.hasError) {
+                final message = snapshot.error.toString().replaceFirst('Exception: ', '');
                 return _EmptyState(
                   icon: Icons.cloud_off_rounded,
                   title: 'Connection error',
-                  subtitle: 'Could not load tests. Pull to refresh.',
+                  subtitle: '$message. Pull to refresh.',
                 );
               }
               final tests = snapshot.data ?? [];
               if (tests.isEmpty) {
-                return _EmptyState(
+                return const _EmptyState(
                   icon: Icons.quiz_outlined,
                   title: 'No tests yet',
                   subtitle: 'Tap the button below to upload your first house test PDF.',
@@ -143,7 +135,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ── Empty state widget ──────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.icon, required this.title, required this.subtitle});
 
@@ -153,6 +144,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.55);
     return ListView(
       children: [
         const SizedBox(height: 100),
@@ -160,17 +152,15 @@ class _EmptyState extends StatelessWidget {
         const SizedBox(height: 16),
         Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.5)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(subtitle, textAlign: TextAlign.center, style: TextStyle(color: muted)),
         ),
       ],
     );
   }
 }
 
-// ── Test card widget ─────────────────────────────────────────────────
 class _TestCard extends StatelessWidget {
   const _TestCard({required this.test, required this.onChanged});
 
@@ -182,16 +172,19 @@ class _TestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final format = DateFormat('dd MMM, hh:mm a');
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? AppTheme.ink;
+    final muted = textColor.withValues(alpha: 0.6);
+    final scheduleBg = Theme.of(context).brightness == Brightness.dark ? AppTheme.darkSurface : AppTheme.surface;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.primaryLight.withValues(alpha: 0.1)),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
         children: [
-          // ── Header row ──
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
@@ -199,18 +192,11 @@ class _TestCard extends StatelessWidget {
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.headerGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  decoration: BoxDecoration(gradient: AppTheme.headerGradient, borderRadius: BorderRadius.circular(12)),
                   child: Center(
                     child: Text(
                       test.branchName.substring(0, 2).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
                     ),
                   ),
                 ),
@@ -219,69 +205,65 @@ class _TestCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        test.title,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(test.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 2),
-                      Text(
-                        '${test.branchName}  •  ${test.timeLimitMinutes} min',
-                        style: TextStyle(fontSize: 12, color: AppTheme.ink.withValues(alpha: 0.5)),
-                      ),
+                      Text('${test.branchName} - ${test.timeLimitMinutes} min', style: TextStyle(fontSize: 12, color: muted)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  decoration: BoxDecoration(color: _statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle),
-                      ),
+                      Container(width: 6, height: 6, decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle)),
                       const SizedBox(width: 4),
-                      Text(
-                        test.isActive ? 'Active' : 'Hidden',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _statusColor),
-                      ),
+                      Text(test.isActive ? 'Active' : 'Hidden', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _statusColor)),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-
-          // ── Schedule info ──
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            ),
+            decoration: BoxDecoration(color: scheduleBg, borderRadius: BorderRadius.circular(AppTheme.radiusSm)),
             child: Row(
               children: [
-                Icon(Icons.schedule_rounded, size: 16, color: AppTheme.ink.withValues(alpha: 0.4)),
+                Icon(Icons.schedule_rounded, size: 16, color: muted),
                 const SizedBox(width: 8),
-                Text(
-                  '${format.format(test.scheduledStart)} — ${format.format(test.scheduledEnd)}',
-                  style: TextStyle(fontSize: 12, color: AppTheme.ink.withValues(alpha: 0.6)),
+                Expanded(
+                  child: Text('${format.format(test.scheduledStart)} - ${format.format(test.scheduledEnd)}', style: TextStyle(fontSize: 12, color: muted)),
                 ),
               ],
             ),
           ),
-
-          // ── Actions ──
           Padding(
             padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _toggleActive(context),
+                    icon: Icon(test.isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
+                    label: Text(test.isActive ? 'Cancel' : 'Reactivate'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: test.isActive ? () => _endNow(context) : null,
+                    icon: const Icon(Icons.stop_circle_outlined, size: 18),
+                    label: const Text('End Now'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Row(
               children: [
                 Expanded(
@@ -295,10 +277,7 @@ class _TestCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _delete(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.error,
-                      side: BorderSide(color: AppTheme.error.withValues(alpha: 0.3)),
-                    ),
+                    style: OutlinedButton.styleFrom(foregroundColor: AppTheme.error, side: BorderSide(color: AppTheme.error.withValues(alpha: 0.3))),
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     label: const Text('Remove'),
                   ),
@@ -316,6 +295,28 @@ class _TestCard extends StatelessWidget {
     final path = result?.files.single.path;
     if (path == null) return;
     await TestService().replacePdf(testId: test.id, pdfPath: path);
+    onChanged();
+  }
+
+  Future<void> _toggleActive(BuildContext context) async {
+    await TestService().setTestActive(testId: test.id, isActive: !test.isActive);
+    onChanged();
+  }
+
+  Future<void> _endNow(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End test now?'),
+        content: Text('Students will no longer be able to access "${test.title}".'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('End Now')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await TestService().endTestNow(test.id);
     onChanged();
   }
 
