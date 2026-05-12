@@ -1,4 +1,4 @@
-const { query } = require('../config/db');
+const { query, transaction } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 const attemptService = require('./attempt.service');
 const storageService = require('./storage.service');
@@ -93,15 +93,21 @@ async function replacePdf(id, file) {
 }
 
 async function removeTest(id) {
-  const existing = await getTestById(id);
-  await query(
-    `DELETE FROM exam_events
-     WHERE test_id = $1
-        OR attempt_id IN (SELECT id FROM test_attempts WHERE test_id = $1)`,
-    [id]
-  );
-  await query('DELETE FROM test_attempts WHERE test_id = $1', [id]);
-  await query('DELETE FROM tests WHERE id = $1', [id]);
+  const existing = await transaction(async (tx) => {
+    const rows = await tx('SELECT id, pdf_path FROM tests WHERE id = $1 FOR UPDATE', [id]);
+    if (!rows[0]) throw new ApiError(404, 'Test not found');
+
+    await tx(
+      `DELETE FROM exam_events
+       WHERE test_id = $1
+          OR attempt_id IN (SELECT id FROM test_attempts WHERE test_id = $1)`,
+      [id]
+    );
+    await tx('DELETE FROM test_attempts WHERE test_id = $1', [id]);
+    await tx('DELETE FROM tests WHERE id = $1', [id]);
+    return rows[0];
+  });
+
   await storageService.deletePdf(existing.pdf_path);
 }
 

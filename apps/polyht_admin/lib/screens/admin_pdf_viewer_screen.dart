@@ -19,6 +19,7 @@ class AdminPdfViewerScreen extends StatefulWidget {
 class _AdminPdfViewerScreenState extends State<AdminPdfViewerScreen> {
   int _currentPage = 0;
   int _totalPages = 0;
+  String? _error;
 
   @override
   void dispose() {
@@ -43,15 +44,33 @@ class _AdminPdfViewerScreenState extends State<AdminPdfViewerScreen> {
         ),
         flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
       ),
-      body: PDFView(
-        filePath: widget.filePath,
-        enableSwipe: true,
-        swipeHorizontal: false,
-        autoSpacing: true,
-        pageFling: true,
-        onRender: (pages) => setState(() => _totalPages = pages ?? 0),
-        onPageChanged: (page, _) => setState(() => _currentPage = page ?? 0),
-      ),
+      body: _error == null
+          ? PDFView(
+              filePath: widget.filePath,
+              enableSwipe: true,
+              swipeHorizontal: false,
+              autoSpacing: true,
+              pageFling: true,
+              onRender: (pages) => setState(() => _totalPages = pages ?? 0),
+              onPageChanged: (page, _) => setState(() => _currentPage = page ?? 0),
+              onError: (error) => setState(() => _error = error.toString()),
+              onPageError: (page, error) => setState(() => _error = 'Page ${(page ?? 0) + 1}: $error'),
+            )
+          : Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.picture_as_pdf_outlined, size: 56, color: AppTheme.error),
+                    const SizedBox(height: 12),
+                    const Text('Unable to open PDF', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Text(_error!, textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

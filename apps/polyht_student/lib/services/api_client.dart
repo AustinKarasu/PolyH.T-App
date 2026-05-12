@@ -70,13 +70,17 @@ class ApiClient {
   Future<String> downloadPdf(int testId) async {
     final response = await http.get(
       Uri.parse('${ApiConfig.baseUrl}/tests/$testId/pdf'),
-      headers: await _headers(),
+      headers: {
+        ...await _headers(jsonBody: false),
+        'Accept': 'application/pdf',
+      },
     );
     if (response.statusCode >= 400) {
       _decode(response);
     }
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/polyht_test_$testId.pdf');
+    _ensurePdfResponse(response);
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/polyht_test_${testId}_${DateTime.now().millisecondsSinceEpoch}.pdf');
     await file.writeAsBytes(response.bodyBytes, flush: true);
     return file.path;
   }
@@ -97,10 +101,39 @@ class ApiClient {
   }
 
   dynamic _decode(http.Response response) {
-    final body = response.body.isEmpty ? null : jsonDecode(response.body);
+    final body = _decodeBody(response);
     if (response.statusCode >= 400) {
-      throw Exception(body?['message'] ?? 'Request failed');
+      throw Exception(_messageFromBody(body));
     }
     return body;
+  }
+
+  dynamic _decodeBody(http.Response response) {
+    if (response.body.isEmpty) return null;
+    try {
+      return jsonDecode(response.body);
+    } catch (_) {
+      return response.body;
+    }
+  }
+
+  String _messageFromBody(dynamic body) {
+    if (body is Map && body['message'] != null) return body['message'].toString();
+    if (body is String && body.trim().isNotEmpty) return body.trim();
+    return 'Request failed';
+  }
+
+  void _ensurePdfResponse(http.Response response) {
+    final contentType = response.headers['content-type'] ?? '';
+    final bytes = response.bodyBytes;
+    final hasPdfHeader = bytes.length >= 4 &&
+        bytes[0] == 0x25 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x44 &&
+        bytes[3] == 0x46;
+    if (contentType.toLowerCase().contains('application/pdf') || hasPdfHeader) return;
+
+    final body = _decodeBody(response);
+    throw Exception(_messageFromBody(body));
   }
 }

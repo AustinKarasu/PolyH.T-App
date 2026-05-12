@@ -43,4 +43,23 @@ async function query(text, params = []) {
   return res.rows;
 }
 
-module.exports = { pool, query };
+async function transaction(callback) {
+  await ensureRuntimeSchema();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(async (text, params = []) => {
+      const res = await client.query(text, params);
+      return res.rows;
+    });
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, query, transaction };

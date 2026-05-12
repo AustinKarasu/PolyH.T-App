@@ -85,8 +85,8 @@ async function deletePdf(filePathOrKey) {
 
 async function getPdfDelivery(filePathOrKey) {
   if (env.storage.driver === 's3') {
-    if (env.storage.s3.publicBaseUrl) {
-      return { type: 'redirect', value: `${env.storage.s3.publicBaseUrl.replace(/\/$/, '')}/${filePathOrKey}` };
+    if (!env.storage.s3.bucket) {
+      throw new ApiError(500, 'S3 bucket is not configured');
     }
     const url = await getSignedUrl(
       getS3Client(),
