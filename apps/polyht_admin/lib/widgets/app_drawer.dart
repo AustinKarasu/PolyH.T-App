@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/admin_accounts_screen.dart';
 import '../screens/security_log_screen.dart';
+import '../screens/settings_screen.dart';
 import '../screens/student_list_screen.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -93,6 +94,14 @@ class AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).pop();
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SecurityLogScreen()));
+                  },
+                ),
+                _DrawerItem(
+                  icon: Icons.settings_outlined,
+                  label: 'Settings',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
                   },
                 ),
                 const Divider(height: 24),

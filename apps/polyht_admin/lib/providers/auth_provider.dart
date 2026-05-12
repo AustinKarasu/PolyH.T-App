@@ -62,4 +62,19 @@ class AuthProvider extends ChangeNotifier {
     user = await _authService.disableTwoFactor(code);
     notifyListeners();
   }
+
+  Future<void> updateProfile({
+    required String fullName,
+    String? email,
+    String? phone,
+    String? address,
+  }) async {
+    user = await _authService.updateProfile(fullName: fullName, email: email, phone: phone, address: address);
+    notifyListeners();
+  }
+
+  Future<void> uploadProfilePhoto(String imagePath) async {
+    user = await _authService.uploadProfilePhoto(imagePath);
+    notifyListeners();
+  }
 }

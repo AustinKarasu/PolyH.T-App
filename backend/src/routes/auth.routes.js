@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
+const { imageUpload } = require('../middleware/upload.middleware');
 const { authLimiter } = require('../middleware/security.middleware');
 const { validate } = require('../middleware/validate.middleware');
 
@@ -19,6 +20,20 @@ router.post(
 );
 
 router.get('/me', authenticate, authController.me);
+router.patch(
+  '/me',
+  authenticate,
+  [
+    body('fullName').optional().trim().isLength({ min: 2, max: 120 }),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail(),
+    body('phone').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 20 }),
+    body('address').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 500 }),
+    body('guardianName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 })
+  ],
+  validate,
+  authController.updateMe
+);
+router.put('/me/photo', authenticate, imageUpload.single('photo'), authController.updateMyPhoto);
 router.post('/2fa/setup', authenticate, authController.setupTwoFactor);
 router.post(
   '/2fa/enable',

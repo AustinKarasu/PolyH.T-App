@@ -42,6 +42,26 @@ class AuthService {
     await _tokenStorage.clear();
   }
 
+  Future<AppUser> updateProfile({
+    required String fullName,
+    String? email,
+    String? phone,
+    String? address,
+  }) async {
+    final data = await _apiClient.patch('/auth/me', {
+      'fullName': fullName,
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      if (address != null) 'address': address,
+    });
+    return AppUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AppUser> uploadProfilePhoto(String imagePath) async {
+    final data = await _apiClient.uploadPhoto(path: '/auth/me/photo', imagePath: imagePath);
+    return AppUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
   Future<Map<String, dynamic>> setupTwoFactor() async {
     return await _apiClient.post('/auth/2fa/setup', {}) as Map<String, dynamic>;
   }

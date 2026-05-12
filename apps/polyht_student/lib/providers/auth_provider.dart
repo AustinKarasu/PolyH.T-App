@@ -49,12 +49,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> updateProfile({
+    String? fullName,
     String? email,
     String? phone,
     String? guardianName,
     String? address,
   }) async {
     user = await _authService.updateProfile(
+      fullName: fullName,
       email: email,
       phone: phone,
       guardianName: guardianName,

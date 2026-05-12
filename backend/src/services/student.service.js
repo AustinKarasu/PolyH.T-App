@@ -48,6 +48,12 @@ async function updateStudentPhoto(userId, file) {
   return getStudentProfile(userId);
 }
 
+async function adminUpdateStudentPhoto(studentId, file) {
+  const student = await getStudentById(studentId);
+  if (student.role !== 'student') throw new ApiError(404, 'Student not found');
+  return updateStudentPhoto(studentId, file);
+}
+
 async function listAllStudents(filters = {}) {
   const conditions = ["u.role = 'student'"];
   const params = [];
@@ -178,6 +184,7 @@ module.exports = {
   getStudentProfile,
   updateStudentProfile,
   updateStudentPhoto,
+  adminUpdateStudentPhoto,
   listAllStudents,
   getStudentById,
   adminCreateStudent,

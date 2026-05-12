@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   late Animation<double> _fadeIn;
   late Animation<Offset> _slideUp;
   bool _obscurePassword = true;
+  bool _showTotp = false;
 
   @override
   void initState() {
@@ -166,15 +167,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 onFieldSubmitted: (_) => _submit(),
                                 validator: (value) => value == null || value.length < 6 ? 'Minimum 6 characters' : null,
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _totpController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: '2FA code (if enabled)',
-                                  prefixIcon: Icon(Icons.verified_user_outlined),
+                              if (_showTotp) ...[
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _totpController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: '2FA code',
+                                    prefixIcon: Icon(Icons.verified_user_outlined),
+                                  ),
+                                  validator: (value) => _showTotp && (value == null || value.trim().length < 6) ? 'Enter your authenticator code' : null,
                                 ),
-                              ),
+                              ],
                               const SizedBox(height: 8),
                               if (auth.error != null) ...[
                                 const SizedBox(height: 8),
@@ -237,12 +241,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-        context.read<AuthProvider>().login(
+    final auth = context.read<AuthProvider>();
+    await auth.login(
           _identifierController.text.trim(),
           _passwordController.text,
           totpCode: _totpController.text.trim(),
         );
+    if (mounted && auth.error?.contains('2FA code required') == true) {
+      setState(() => _showTotp = true);
+    }
   }
 }

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { query } = require('../config/db');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
+const storageService = require('./storage.service');
 
 async function login(identifier, password, context = {}) {
   const rows = await query(
@@ -73,6 +74,36 @@ async function getCurrentUser(userId) {
   return rows[0];
 }
 
+async function updateCurrentUser(userId, patch) {
+  const allowed = ['full_name', 'email', 'phone', 'address', 'guardian_name'];
+  const sets = [];
+  const params = [];
+  let idx = 1;
+  for (const key of allowed) {
+    const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    if (patch[camelKey] !== undefined) {
+      sets.push(`${key} = $${idx++}`);
+      params.push(patch[camelKey] || null);
+    }
+  }
+  if (sets.length === 0) throw new ApiError(422, 'No valid fields to update');
+  params.push(userId);
+  try {
+    await query(`UPDATE users SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx}`, params);
+  } catch (err) {
+    if (err.code === '23505') throw new ApiError(409, 'Email already exists');
+    throw err;
+  }
+  return getCurrentUser(userId);
+}
+
+async function updateCurrentUserPhoto(userId, file) {
+  if (!file) throw new ApiError(422, 'Profile photo is required');
+  const photoUrl = await storageService.saveProfilePhoto(file);
+  await query('UPDATE users SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [photoUrl, userId]);
+  return getCurrentUser(userId);
+}
+
 async function setupTwoFactor(userId) {
   const user = await getCurrentUser(userId);
   const secret = generateBase32Secret();
@@ -115,7 +146,16 @@ function sanitizeUser(user) {
   return copy;
 }
 
-module.exports = { login, getCurrentUser, setupTwoFactor, enableTwoFactor, disableTwoFactor, logout };
+module.exports = {
+  login,
+  getCurrentUser,
+  updateCurrentUser,
+  updateCurrentUserPhoto,
+  setupTwoFactor,
+  enableTwoFactor,
+  disableTwoFactor,
+  logout
+};
 
 const base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 

@@ -66,6 +66,15 @@ async function adminUpdateStudent(req, res, next) {
   }
 }
 
+async function adminUpdateStudentPhoto(req, res, next) {
+  try {
+    const student = await studentService.adminUpdateStudentPhoto(Number(req.params.id), req.file);
+    res.json({ student });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function adminDeleteStudent(req, res, next) {
   try {
     await studentService.adminDeleteStudent(Number(req.params.id));
@@ -83,5 +92,6 @@ module.exports = {
   getStudentById,
   adminCreateStudent,
   adminUpdateStudent,
+  adminUpdateStudentPhoto,
   adminDeleteStudent
 };

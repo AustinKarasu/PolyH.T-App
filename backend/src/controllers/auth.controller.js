@@ -23,6 +23,24 @@ async function me(req, res, next) {
   }
 }
 
+async function updateMe(req, res, next) {
+  try {
+    const user = await authService.updateCurrentUser(req.user.sub, req.body);
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateMyPhoto(req, res, next) {
+  try {
+    const user = await authService.updateCurrentUserPhoto(req.user.sub, req.file);
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function setupTwoFactor(req, res, next) {
   try {
     const result = await authService.setupTwoFactor(req.user.sub);
@@ -59,4 +77,4 @@ async function logout(req, res, next) {
   }
 }
 
-module.exports = { login, me, setupTwoFactor, enableTwoFactor, disableTwoFactor, logout };
+module.exports = { login, me, updateMe, updateMyPhoto, setupTwoFactor, enableTwoFactor, disableTwoFactor, logout };

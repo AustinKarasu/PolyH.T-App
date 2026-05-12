@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../config/app_theme.dart';
 import '../models/app_user.dart';
@@ -375,6 +376,11 @@ class _StudentDetailScreenState extends State<_StudentDetailScreen> {
         flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
         actions: [
           IconButton(
+            tooltip: 'Change photo',
+            icon: const Icon(Icons.camera_alt_outlined),
+            onPressed: _changePhoto,
+          ),
+          IconButton(
             tooltip: 'Edit',
             icon: const Icon(Icons.edit_rounded),
             onPressed: _edit,
@@ -478,6 +484,22 @@ class _StudentDetailScreenState extends State<_StudentDetailScreen> {
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  Future<void> _changePhoto() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final path = result?.files.single.path;
+    if (path == null) return;
+    try {
+      final updated = await _service.uploadStudentPhoto(id: student.id, imagePath: path);
+      if (!mounted) return;
+      setState(() => student = updated);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student photo updated')));
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+      }
     }
   }
 }

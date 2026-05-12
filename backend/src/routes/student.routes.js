@@ -92,6 +92,13 @@ router.patch(
   validate,
   studentController.adminUpdateStudent
 );
+router.put(
+  '/:id/photo',
+  authenticate,
+  requireRole('admin'),
+  imageUpload.single('photo'),
+  studentController.adminUpdateStudentPhoto
+);
 router.delete('/:id', authenticate, requireRole('admin'), studentController.adminDeleteStudent);
 
 module.exports = router;

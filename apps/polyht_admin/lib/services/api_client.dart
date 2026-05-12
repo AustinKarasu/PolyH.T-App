@@ -99,6 +99,18 @@ class ApiClient {
     return _decode(response);
   }
 
+  Future<dynamic> uploadPhoto({
+    required String path,
+    required String imagePath,
+  }) async {
+    final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}$path'));
+    request.headers.addAll(await _headers(jsonBody: false));
+    request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    return _decode(response);
+  }
+
   dynamic _decode(http.Response response) {
     final body = response.body.isEmpty ? null : jsonDecode(response.body);
     if (response.statusCode >= 400) {
