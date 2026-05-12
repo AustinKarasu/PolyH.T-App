@@ -7,10 +7,12 @@ import android.view.WindowManager
 
 class MainActivity : FlutterActivity() {
     private val channelName = "polyht/exam_security"
+    private var channel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
+        channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        channel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "enterExamMode" -> {
                     window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -28,8 +30,16 @@ class MainActivity : FlutterActivity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     result.success(null)
                 }
+                "isInMultiWindowMode" -> {
+                    result.success(isInMultiWindowMode)
+                }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode)
+        channel?.invokeMethod("multiWindowModeChanged", isInMultiWindowMode)
     }
 }

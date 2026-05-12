@@ -36,6 +36,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _securityService.setEventHandler(_logEvent);
     _startedAt = DateTime.now();
     _startTimer();
     _enterExam();
@@ -286,6 +287,9 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     try {
       await _securityService.enterExamMode();
       await _testService.startAttempt(widget.test.id);
+      if (await _securityService.isInMultiWindowMode()) {
+        await _logEvent('split_screen_detected');
+      }
       final path = await _testService.downloadPdf(widget.test.id);
       await _testService.recordEvent(widget.test.id, 'pdf_opened');
       if (mounted) {

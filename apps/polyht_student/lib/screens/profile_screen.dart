@@ -123,6 +123,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _InfoRow(label: 'Phone', value: user.phone ?? '—'),
               _InfoRow(label: 'Address', value: user.address ?? '—'),
             ]),
+            const SizedBox(height: 16),
+            _SectionHeader(title: 'Account Security'),
+            _InfoCard(children: [
+              ListTile(
+                leading: const Icon(Icons.verified_user_outlined),
+                title: Text(user.twoFactorEnabled == true ? 'Two-factor authentication enabled' : 'Two-factor authentication off'),
+                subtitle: const Text('Use an authenticator app for login verification.'),
+                trailing: FilledButton(
+                  onPressed: () => user.twoFactorEnabled == true ? _disable2fa(context) : _enable2fa(context),
+                  child: Text(user.twoFactorEnabled == true ? 'Disable' : 'Enable'),
+                ),
+              ),
+            ]),
             const SizedBox(height: 32),
           ],
         ),
@@ -227,6 +240,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
       addressController.dispose();
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _enable2fa(BuildContext context) async {
+    final setup = await context.read<AuthProvider>().setupTwoFactor();
+    if (!context.mounted) return;
+    final codeController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enable 2FA'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Add this secret to Google Authenticator, Microsoft Authenticator, or any TOTP app, then enter the 6-digit code.'),
+            const SizedBox(height: 12),
+            SelectableText(setup['secret'] as String),
+            const SizedBox(height: 12),
+            TextField(controller: codeController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Enable')),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<AuthProvider>().enableTwoFactor(codeController.text.trim());
+    }
+    codeController.dispose();
+  }
+
+  Future<void> _disable2fa(BuildContext context) async {
+    final codeController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Disable 2FA'),
+        content: TextField(controller: codeController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Disable')),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<AuthProvider>().disableTwoFactor(codeController.text.trim());
+    }
+    codeController.dispose();
   }
 }
 

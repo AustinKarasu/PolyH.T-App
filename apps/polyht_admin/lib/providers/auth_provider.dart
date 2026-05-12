@@ -31,12 +31,12 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String identifier, String password) async {
+  Future<void> login(String identifier, String password, {String? totpCode}) async {
     isLoading = true;
     error = null;
     notifyListeners();
     try {
-      user = await _authService.login(identifier, password);
+      user = await _authService.login(identifier, password, totpCode: totpCode);
     } catch (err) {
       error = err.toString();
     } finally {
@@ -48,6 +48,18 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     user = null;
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> setupTwoFactor() => _authService.setupTwoFactor();
+
+  Future<void> enableTwoFactor(String code) async {
+    user = await _authService.enableTwoFactor(code);
+    notifyListeners();
+  }
+
+  Future<void> disableTwoFactor(String code) async {
+    user = await _authService.disableTwoFactor(code);
     notifyListeners();
   }
 }

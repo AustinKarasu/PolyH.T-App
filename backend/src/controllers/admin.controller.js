@@ -31,4 +31,22 @@ async function setAdminActive(req, res, next) {
   }
 }
 
-module.exports = { listAdmins, createAdmin, setAdminActive };
+async function setPrimaryAdmin(req, res, next) {
+  try {
+    await adminService.setPrimaryAdmin(Number(req.params.id));
+    res.json({ status: 'updated' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteAdmin(req, res, next) {
+  try {
+    await adminService.deleteAdmin(Number(req.params.id), req.user.sub);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listAdmins, createAdmin, setAdminActive, setPrimaryAdmin, deleteAdmin };

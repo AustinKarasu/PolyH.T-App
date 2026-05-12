@@ -19,6 +19,8 @@ class AppUser {
     this.address,
     this.admissionYear,
     this.photoUrl,
+    this.twoFactorEnabled,
+    this.isPrimaryAdmin,
   });
 
   final int id;
@@ -40,6 +42,8 @@ class AppUser {
   final String? address;
   final int? admissionYear;
   final String? photoUrl;
+  final bool? twoFactorEnabled;
+  final bool? isPrimaryAdmin;
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
@@ -62,6 +66,8 @@ class AppUser {
       address: json['address'] as String?,
       admissionYear: json['admission_year'] as int?,
       photoUrl: json['photo_url'] as String?,
+      twoFactorEnabled: json['two_factor_enabled'] == true || json['two_factor_enabled'] == 1,
+      isPrimaryAdmin: json['is_primary_admin'] == true || json['is_primary_admin'] == 1,
     );
   }
 }

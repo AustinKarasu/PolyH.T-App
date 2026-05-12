@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS users (
   address TEXT,
   admission_year INT,
   photo_url VARCHAR(500),
+  two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  two_factor_secret VARCHAR(160),
+  is_primary_admin BOOLEAN NOT NULL DEFAULT FALSE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -103,3 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_events_attempt ON exam_events(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_events_test ON exam_events(test_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_jti ON auth_sessions(token_jti);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_primary_admin
+  ON users (role)
+  WHERE role = 'admin' AND is_primary_admin = TRUE;

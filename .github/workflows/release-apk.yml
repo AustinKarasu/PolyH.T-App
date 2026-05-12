@@ -56,7 +56,7 @@ jobs:
           RELEASE_NOTES="${{ github.event.inputs.releaseNotes }}"
           if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
           if [ -z "$BUILD_NUMBER" ]; then BUILD_NUMBER="${GITHUB_RUN_NUMBER}"; fi
-          if [ -z "$MANDATORY" ]; then MANDATORY="false"; fi
+          if [ -z "$MANDATORY" ]; then MANDATORY="true"; fi
           if [ -z "$RELEASE_NOTES" ]; then RELEASE_NOTES="PolyH.T APK release."; fi
           WEBSITE_BASE_URL="${{ vars.WEBSITE_BASE_URL }}"
           if [ -z "$WEBSITE_BASE_URL" ]; then WEBSITE_BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"; fi

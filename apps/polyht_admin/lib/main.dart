@@ -7,6 +7,7 @@ import 'providers/theme_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'widgets/splash_screen.dart';
+import 'widgets/update_gate.dart';
 
 void main() {
   runApp(const PolyHtAdminApp());
@@ -30,13 +31,15 @@ class PolyHtAdminApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: themeProvider.mode,
-            home: Consumer<AuthProvider>(
+            home: UpdateGate(
+              child: Consumer<AuthProvider>(
               builder: (context, auth, _) {
                 if (auth.isLoading) {
                   return const SplashScreen(subtitle: 'ADMIN');
                 }
                 return auth.isAuthenticated ? const DashboardScreen() : const LoginScreen();
               },
+            ),
             ),
           );
         },

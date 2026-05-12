@@ -4,6 +4,7 @@ async function login(req, res, next) {
   try {
     const result = await authService.login(req.body.identifier, req.body.password, {
       deviceLabel: req.body.deviceLabel,
+      totpCode: req.body.totpCode,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
@@ -22,6 +23,33 @@ async function me(req, res, next) {
   }
 }
 
+async function setupTwoFactor(req, res, next) {
+  try {
+    const result = await authService.setupTwoFactor(req.user.sub);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function enableTwoFactor(req, res, next) {
+  try {
+    const user = await authService.enableTwoFactor(req.user.sub, req.body.code);
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function disableTwoFactor(req, res, next) {
+  try {
+    const user = await authService.disableTwoFactor(req.user.sub, req.body.code);
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function logout(req, res, next) {
   try {
     await authService.logout(req.user);
@@ -31,4 +59,4 @@ async function logout(req, res, next) {
   }
 }
 
-module.exports = { login, me, logout };
+module.exports = { login, me, setupTwoFactor, enableTwoFactor, disableTwoFactor, logout };

@@ -29,5 +29,7 @@ router.patch(
   validate,
   adminController.setAdminActive
 );
+router.patch('/:id/primary', adminController.setPrimaryAdmin);
+router.delete('/:id', adminController.deleteAdmin);
 
 module.exports = router;

@@ -11,6 +11,7 @@ router.post(
   [
     body('identifier').trim().notEmpty(),
     body('password').isLength({ min: 6 }),
+    body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
     body('deviceLabel').optional().trim().isLength({ max: 160 })
   ],
   validate,
@@ -18,6 +19,21 @@ router.post(
 );
 
 router.get('/me', authenticate, authController.me);
+router.post('/2fa/setup', authenticate, authController.setupTwoFactor);
+router.post(
+  '/2fa/enable',
+  authenticate,
+  [body('code').trim().isLength({ min: 6, max: 8 })],
+  validate,
+  authController.enableTwoFactor
+);
+router.post(
+  '/2fa/disable',
+  authenticate,
+  [body('code').trim().isLength({ min: 6, max: 8 })],
+  validate,
+  authController.disableTwoFactor
+);
 router.post('/logout', authenticate, authController.logout);
 
 module.exports = router;

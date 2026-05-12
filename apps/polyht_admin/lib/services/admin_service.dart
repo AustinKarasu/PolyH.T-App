@@ -26,4 +26,12 @@ class AdminService {
   Future<void> setActive(int adminId, bool isActive) async {
     await _apiClient.patch('/admins/$adminId/active', {'isActive': isActive});
   }
+
+  Future<void> setPrimary(int adminId) async {
+    await _apiClient.patch('/admins/$adminId/primary', {});
+  }
+
+  Future<void> deleteAdmin(int adminId) async {
+    await _apiClient.delete('/admins/$adminId');
+  }
 }

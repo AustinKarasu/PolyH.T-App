@@ -4,8 +4,8 @@ const { ApiError } = require('../utils/api-error');
 
 async function listAdmins() {
   return query(
-    `SELECT id, full_name, email, is_active, created_at
-     FROM users WHERE role = 'admin' ORDER BY created_at DESC`
+    `SELECT id, full_name, email, is_active, two_factor_enabled, is_primary_admin, created_at
+     FROM users WHERE role = 'admin' ORDER BY is_primary_admin DESC, created_at DESC`
   );
 }
 
@@ -13,8 +13,8 @@ async function createAdmin({ fullName, email, password }) {
   const passwordHash = await bcrypt.hash(password, 12);
   try {
     const rows = await query(
-      `INSERT INTO users (full_name, email, password_hash, role, is_active)
-       VALUES ($1, $2, $3, 'admin', TRUE) RETURNING id`,
+      `INSERT INTO users (full_name, email, password_hash, role, is_active, is_primary_admin)
+       VALUES ($1, $2, $3, 'admin', TRUE, FALSE) RETURNING id`,
       [fullName, email, passwordHash]
     );
     return { id: rows[0].id, full_name: fullName, email, role: 'admin' };
@@ -30,10 +30,33 @@ async function setAdminActive(adminId, isActive, actingAdminId) {
   if (adminId === actingAdminId && !isActive) {
     throw new ApiError(422, 'You cannot deactivate your own admin account');
   }
+  const rows = await query('SELECT is_primary_admin FROM users WHERE id = $1 AND role = $2 LIMIT 1', [adminId, 'admin']);
+  if (!rows[0]) throw new ApiError(404, 'Admin account not found');
+  if (rows[0].is_primary_admin && !isActive) {
+    throw new ApiError(422, 'Primary admin cannot be deactivated until another admin is made primary');
+  }
   await query(
     `UPDATE users SET is_active = $1 WHERE id = $2 AND role = 'admin'`,
     [isActive, adminId]
   );
 }
 
-module.exports = { listAdmins, createAdmin, setAdminActive };
+async function setPrimaryAdmin(adminId) {
+  const rows = await query('SELECT id, is_active FROM users WHERE id = $1 AND role = $2 LIMIT 1', [adminId, 'admin']);
+  if (!rows[0]) throw new ApiError(404, 'Admin account not found');
+  if (!rows[0].is_active) throw new ApiError(422, 'Only an active admin can be primary');
+  await query('UPDATE users SET is_primary_admin = FALSE WHERE role = $1', ['admin']);
+  await query('UPDATE users SET is_primary_admin = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND role = $2', [adminId, 'admin']);
+}
+
+async function deleteAdmin(adminId, actingAdminId) {
+  if (adminId === actingAdminId) throw new ApiError(422, 'You cannot delete your own admin account');
+  const rows = await query('SELECT is_primary_admin FROM users WHERE id = $1 AND role = $2 LIMIT 1', [adminId, 'admin']);
+  if (!rows[0]) throw new ApiError(404, 'Admin account not found');
+  if (rows[0].is_primary_admin) throw new ApiError(422, 'Primary admin cannot be deleted until another admin is made primary');
+  await query('UPDATE test_attempts SET allowed_by = NULL WHERE allowed_by = $1', [adminId]);
+  await query('DELETE FROM auth_sessions WHERE user_id = $1', [adminId]);
+  await query('DELETE FROM users WHERE id = $1 AND role = $2', [adminId, 'admin']);
+}
+
+module.exports = { listAdmins, createAdmin, setAdminActive, setPrimaryAdmin, deleteAdmin };

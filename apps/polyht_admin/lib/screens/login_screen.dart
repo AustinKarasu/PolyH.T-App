@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _totpController = TextEditingController();
   late AnimationController _animController;
   late Animation<double> _fadeIn;
   late Animation<Offset> _slideUp;
@@ -38,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _animController.dispose();
     _identifierController.dispose();
     _passwordController.dispose();
+    _totpController.dispose();
     super.dispose();
   }
 
@@ -164,6 +166,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 onFieldSubmitted: (_) => _submit(),
                                 validator: (value) => value == null || value.length < 6 ? 'Minimum 6 characters' : null,
                               ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _totpController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: '2FA code (if enabled)',
+                                  prefixIcon: Icon(Icons.verified_user_outlined),
+                                ),
+                              ),
                               const SizedBox(height: 8),
                               if (auth.error != null) ...[
                                 const SizedBox(height: 8),
@@ -228,9 +239,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    context.read<AuthProvider>().login(
+        context.read<AuthProvider>().login(
           _identifierController.text.trim(),
           _passwordController.text,
+          totpCode: _totpController.text.trim(),
         );
   }
 }
