@@ -396,7 +396,9 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     if (_locked) return;
     try {
       if (autoSubmitted) {
-        await _testService.recordEvent(widget.test.id, 'time_limit_reached');
+        try {
+          await _testService.recordEvent(widget.test.id, 'time_limit_reached');
+        } catch (_) {}
       }
       await _testService.completeAttempt(widget.test.id);
       await _deleteLocalPdf();
