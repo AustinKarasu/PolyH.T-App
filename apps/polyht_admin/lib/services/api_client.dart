@@ -109,7 +109,7 @@ class ApiClient {
 
   Future<String> downloadPdf(int testId) async {
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/tests/$testId/pdf'),
+      Uri.parse('${ApiConfig.baseUrl}/tests/$testId/admin/pdf'),
       headers: await _headers(),
     );
     if (response.statusCode >= 400) {

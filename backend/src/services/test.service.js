@@ -94,7 +94,12 @@ async function replacePdf(id, file) {
 
 async function removeTest(id) {
   const existing = await getTestById(id);
-  await query('DELETE FROM exam_events WHERE test_id = $1', [id]);
+  await query(
+    `DELETE FROM exam_events
+     WHERE test_id = $1
+        OR attempt_id IN (SELECT id FROM test_attempts WHERE test_id = $1)`,
+    [id]
+  );
   await query('DELETE FROM test_attempts WHERE test_id = $1', [id]);
   await query('DELETE FROM tests WHERE id = $1', [id]);
   await storageService.deletePdf(existing.pdf_path);

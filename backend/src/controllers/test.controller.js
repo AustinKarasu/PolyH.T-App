@@ -99,6 +99,18 @@ async function downloadPdf(req, res, next) {
   }
 }
 
+async function downloadAdminPdf(req, res, next) {
+  try {
+    const delivery = await testService.getAdminPdf(Number(req.params.id));
+    if (delivery.type === 'redirect') {
+      return res.redirect(delivery.value);
+    }
+    return res.download(delivery.value);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createTest,
   listTests,
@@ -107,5 +119,6 @@ module.exports = {
   endTestNow,
   replacePdf,
   removeTest,
-  downloadPdf
+  downloadPdf,
+  downloadAdminPdf
 };
