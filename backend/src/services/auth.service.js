@@ -104,6 +104,31 @@ async function updateCurrentUserPhoto(userId, file) {
   return getCurrentUser(userId);
 }
 
+async function changeCurrentUserPassword(userId, { currentPassword, newPassword, totpCode }) {
+  const rows = await query(
+    `SELECT id, password_hash, two_factor_enabled, two_factor_secret
+     FROM users WHERE id = $1 AND is_active = true LIMIT 1`,
+    [userId]
+  );
+  const user = rows[0];
+  if (!user) throw new ApiError(401, 'User account is inactive or no longer exists');
+  if (!user.two_factor_enabled || !user.two_factor_secret) {
+    throw new ApiError(403, 'Enable 2FA before changing your password');
+  }
+  if (!verifyTotp(totpCode, user.two_factor_secret)) {
+    throw new ApiError(422, 'Invalid authenticator code');
+  }
+  const matches = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!matches) {
+    throw new ApiError(401, 'Current password is incorrect');
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await query(
+    'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+    [passwordHash, userId]
+  );
+}
+
 async function setupTwoFactor(userId) {
   const user = await getCurrentUser(userId);
   const secret = generateBase32Secret();
@@ -151,6 +176,7 @@ module.exports = {
   getCurrentUser,
   updateCurrentUser,
   updateCurrentUserPhoto,
+  changeCurrentUserPassword,
   setupTwoFactor,
   enableTwoFactor,
   disableTwoFactor,

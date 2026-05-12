@@ -34,6 +34,23 @@ router.patch(
   authController.updateMe
 );
 router.put('/me/photo', authenticate, imageUpload.single('photo'), authController.updateMyPhoto);
+router.post(
+  '/me/password',
+  authenticate,
+  [
+    body('currentPassword').isLength({ min: 6 }),
+    body('newPassword').isStrongPassword({
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    }),
+    body('totpCode').trim().isLength({ min: 6, max: 8 })
+  ],
+  validate,
+  authController.changePassword
+);
 router.post('/2fa/setup', authenticate, authController.setupTwoFactor);
 router.post(
   '/2fa/enable',

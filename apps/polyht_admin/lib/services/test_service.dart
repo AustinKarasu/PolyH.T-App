@@ -25,7 +25,9 @@ class TestService {
     required DateTime scheduledStart,
     required DateTime scheduledEnd,
     required int timeLimitMinutes,
-    required String pdfPath,
+    String? pdfPath,
+    List<int>? pdfBytes,
+    required String pdfName,
   }) async {
     await _apiClient.uploadTest(
       title: title,
@@ -34,11 +36,18 @@ class TestService {
       scheduledEnd: scheduledEnd,
       timeLimitMinutes: timeLimitMinutes,
       pdfPath: pdfPath,
+      pdfBytes: pdfBytes,
+      pdfName: pdfName,
     );
   }
 
-  Future<void> replacePdf({required int testId, required String pdfPath}) async {
-    await _apiClient.replacePdf(testId: testId, pdfPath: pdfPath);
+  Future<void> replacePdf({
+    required int testId,
+    String? pdfPath,
+    List<int>? pdfBytes,
+    required String pdfName,
+  }) async {
+    await _apiClient.replacePdf(testId: testId, pdfPath: pdfPath, pdfBytes: pdfBytes, pdfName: pdfName);
   }
 
   Future<void> deleteTest(int testId) async {

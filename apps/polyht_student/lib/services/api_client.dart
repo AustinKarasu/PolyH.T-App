@@ -54,10 +54,14 @@ class ApiClient {
     return _decode(response);
   }
 
-  Future<dynamic> uploadProfilePhoto(String imagePath) async {
+  Future<dynamic> uploadProfilePhoto({
+    String? imagePath,
+    List<int>? imageBytes,
+    required String imageName,
+  }) async {
     final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}/students/me/photo'));
     request.headers.addAll(await _headers(jsonBody: false));
-    request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
+    request.files.add(await _multipartFile('photo', path: imagePath, bytes: imageBytes, filename: imageName));
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     return _decode(response);
@@ -75,6 +79,21 @@ class ApiClient {
     final file = File('${dir.path}/polyht_test_$testId.pdf');
     await file.writeAsBytes(response.bodyBytes, flush: true);
     return file.path;
+  }
+
+  Future<http.MultipartFile> _multipartFile(
+    String field, {
+    String? path,
+    List<int>? bytes,
+    required String filename,
+  }) async {
+    if (bytes != null) {
+      return http.MultipartFile.fromBytes(field, bytes, filename: filename);
+    }
+    if (path != null) {
+      return http.MultipartFile.fromPath(field, path, filename: filename);
+    }
+    throw Exception('No file selected');
   }
 
   dynamic _decode(http.Response response) {

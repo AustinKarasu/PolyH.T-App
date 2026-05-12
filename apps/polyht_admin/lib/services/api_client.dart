@@ -68,7 +68,9 @@ class ApiClient {
     required DateTime scheduledStart,
     required DateTime scheduledEnd,
     required int timeLimitMinutes,
-    required String pdfPath,
+    String? pdfPath,
+    List<int>? pdfBytes,
+    required String pdfName,
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}/tests'));
     request.headers.addAll(await _headers(jsonBody: false));
@@ -79,7 +81,7 @@ class ApiClient {
       'scheduledEnd': scheduledEnd.toIso8601String(),
       'timeLimitMinutes': '$timeLimitMinutes',
     });
-    request.files.add(await http.MultipartFile.fromPath('pdf', pdfPath));
+    request.files.add(await _multipartFile('pdf', path: pdfPath, bytes: pdfBytes, filename: pdfName));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
@@ -88,11 +90,13 @@ class ApiClient {
 
   Future<dynamic> replacePdf({
     required int testId,
-    required String pdfPath,
+    String? pdfPath,
+    List<int>? pdfBytes,
+    required String pdfName,
   }) async {
     final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}/tests/$testId/pdf'));
     request.headers.addAll(await _headers(jsonBody: false));
-    request.files.add(await http.MultipartFile.fromPath('pdf', pdfPath));
+    request.files.add(await _multipartFile('pdf', path: pdfPath, bytes: pdfBytes, filename: pdfName));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
@@ -101,14 +105,31 @@ class ApiClient {
 
   Future<dynamic> uploadPhoto({
     required String path,
-    required String imagePath,
+    String? imagePath,
+    List<int>? imageBytes,
+    required String imageName,
   }) async {
     final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}$path'));
     request.headers.addAll(await _headers(jsonBody: false));
-    request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
+    request.files.add(await _multipartFile('photo', path: imagePath, bytes: imageBytes, filename: imageName));
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     return _decode(response);
+  }
+
+  Future<http.MultipartFile> _multipartFile(
+    String field, {
+    String? path,
+    List<int>? bytes,
+    required String filename,
+  }) async {
+    if (bytes != null) {
+      return http.MultipartFile.fromBytes(field, bytes, filename: filename);
+    }
+    if (path != null) {
+      return http.MultipartFile.fromPath(field, path, filename: filename);
+    }
+    throw Exception('No file selected');
   }
 
   dynamic _decode(http.Response response) {

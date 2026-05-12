@@ -154,12 +154,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickPhoto(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    final path = result?.files.single.path;
-    if (path == null || !context.mounted) return;
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final file = result?.files.single;
+    if (file == null || (file.path == null && file.bytes == null) || !context.mounted) return;
     setState(() => _saving = true);
     try {
-      await context.read<AuthProvider>().uploadProfilePhoto(path);
+      await context.read<AuthProvider>().uploadProfilePhoto(
+        imagePath: file.path,
+        imageBytes: file.bytes,
+        imageName: file.name,
+      );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated')));
       }

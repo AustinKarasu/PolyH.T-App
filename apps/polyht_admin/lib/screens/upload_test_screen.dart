@@ -23,6 +23,7 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   DateTime? _start;
   DateTime? _end;
   String? _pdfPath;
+  List<int>? _pdfBytes;
   String? _pdfName;
   bool _saving = false;
 
@@ -148,8 +149,8 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
               _ActionTile(
                 icon: Icons.picture_as_pdf_rounded,
                 label: _pdfName ?? 'Choose PDF file',
-                subtitle: _pdfPath == null ? 'Required' : null,
-                trailing: _pdfPath != null
+                subtitle: _pdfPath == null && _pdfBytes == null ? 'Required' : null,
+                trailing: _pdfPath != null || _pdfBytes != null
                     ? const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20)
                     : null,
                 onTap: _pickPdf,
@@ -195,11 +196,17 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   }
 
   Future<void> _pickPdf() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
-    if (result != null && result.files.single.path != null) {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    if (result != null) {
+      final file = result.files.single;
       setState(() {
-        _pdfPath = result.files.single.path;
-        _pdfName = result.files.single.name;
+        _pdfPath = file.path;
+        _pdfBytes = file.bytes;
+        _pdfName = file.name;
       });
     }
   }
@@ -223,7 +230,7 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate() || _pdfPath == null || _start == null || _end == null) {
+    if (!_formKey.currentState!.validate() || (_pdfPath == null && _pdfBytes == null) || _pdfName == null || _start == null || _end == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all fields, choose a schedule, and pick a PDF.')),
       );
@@ -237,7 +244,9 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
         scheduledStart: _start!,
         scheduledEnd: _end!,
         timeLimitMinutes: int.parse(_timeLimitController.text),
-        pdfPath: _pdfPath!,
+        pdfPath: _pdfPath,
+        pdfBytes: _pdfBytes,
+        pdfName: _pdfName!,
       );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {

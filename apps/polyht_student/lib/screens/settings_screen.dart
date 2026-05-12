@@ -30,9 +30,96 @@ class SettingsScreen extends StatelessWidget {
               FilledButton(onPressed: () => enabled ? _disable(context) : _enable(context), child: Text(enabled ? 'Disable' : 'Enable')),
             ]),
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Theme.of(context).cardTheme.color, borderRadius: BorderRadius.circular(AppTheme.radiusLg), boxShadow: AppTheme.cardShadow),
+            child: Row(children: [
+              const Icon(Icons.lock_reset_rounded, color: AppTheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(enabled ? 'Change your password using 2FA verification' : 'Enable 2FA before changing your password'),
+              ),
+              FilledButton(
+                onPressed: enabled ? () => _changePassword(context) : null,
+                child: const Text('Change'),
+              ),
+            ]),
+          ),
         ],
       ),
     );
+  }
+
+  String? _strongPassword(String value) {
+    if (value.length < 8) return 'Use at least 8 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Add an uppercase letter';
+    if (!RegExp(r'[a-z]').hasMatch(value)) return 'Add a lowercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Add a number';
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) return 'Add a symbol';
+    return null;
+  }
+
+  Future<void> _changePassword(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final current = TextEditingController();
+    final next = TextEditingController();
+    final confirm = TextEditingController();
+    final code = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Password'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: current, obscureText: true, decoration: const InputDecoration(labelText: 'Current password')),
+            const SizedBox(height: 12),
+            TextField(controller: next, obscureText: true, decoration: const InputDecoration(labelText: 'New password')),
+            const SizedBox(height: 12),
+            TextField(controller: confirm, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password')),
+            const SizedBox(height: 12),
+            TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) {
+      current.dispose();
+      next.dispose();
+      confirm.dispose();
+      code.dispose();
+      return;
+    }
+
+    final passwordError = _strongPassword(next.text);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(passwordError)));
+    } else if (next.text != confirm.text) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('New passwords do not match')));
+    } else {
+      try {
+        await auth.changePassword(
+          currentPassword: current.text,
+          newPassword: next.text,
+          totpCode: code.text.trim(),
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed')));
+        }
+      } catch (err) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+        }
+      }
+    }
+    current.dispose();
+    next.dispose();
+    confirm.dispose();
+    code.dispose();
   }
 
   Future<void> _enable(BuildContext context) async {

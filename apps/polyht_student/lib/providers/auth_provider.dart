@@ -65,9 +65,29 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> uploadProfilePhoto(String imagePath) async {
-    user = await _authService.uploadProfilePhoto(imagePath);
+  Future<void> uploadProfilePhoto({
+    String? imagePath,
+    List<int>? imageBytes,
+    required String imageName,
+  }) async {
+    user = await _authService.uploadProfilePhoto(
+      imagePath: imagePath,
+      imageBytes: imageBytes,
+      imageName: imageName,
+    );
     notifyListeners();
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String totpCode,
+  }) async {
+    await _authService.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      totpCode: totpCode,
+    );
   }
 
   Future<Map<String, dynamic>> setupTwoFactor() => _authService.setupTwoFactor();

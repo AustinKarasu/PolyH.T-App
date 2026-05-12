@@ -57,8 +57,17 @@ class AuthService {
     return AppUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  Future<AppUser> uploadProfilePhoto(String imagePath) async {
-    final data = await _apiClient.uploadPhoto(path: '/auth/me/photo', imagePath: imagePath);
+  Future<AppUser> uploadProfilePhoto({
+    String? imagePath,
+    List<int>? imageBytes,
+    required String imageName,
+  }) async {
+    final data = await _apiClient.uploadPhoto(
+      path: '/auth/me/photo',
+      imagePath: imagePath,
+      imageBytes: imageBytes,
+      imageName: imageName,
+    );
     return AppUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 

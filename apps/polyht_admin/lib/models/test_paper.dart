@@ -27,8 +27,15 @@ class TestPaper {
       scheduledStart: DateTime.parse(json['scheduled_start'] as String),
       scheduledEnd: DateTime.parse(json['scheduled_end'] as String),
       timeLimitMinutes: json['time_limit_minutes'] as int,
-      isActive: (json['is_active'] as int? ?? 1) == 1 || json['is_active'] == true,
+      isActive: _boolFromJson(json['is_active']),
       originalFilename: json['original_filename'] as String?,
     );
+  }
+
+  static bool _boolFromJson(Object? value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) return value == 'true' || value == '1';
+    return true;
   }
 }

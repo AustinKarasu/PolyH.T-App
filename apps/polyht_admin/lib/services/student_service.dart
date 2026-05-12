@@ -92,8 +92,18 @@ class StudentService {
     await _apiClient.delete('/students/$id');
   }
 
-  Future<AppUser> uploadStudentPhoto({required int id, required String imagePath}) async {
-    final data = await _apiClient.uploadPhoto(path: '/students/$id/photo', imagePath: imagePath);
+  Future<AppUser> uploadStudentPhoto({
+    required int id,
+    String? imagePath,
+    List<int>? imageBytes,
+    required String imageName,
+  }) async {
+    final data = await _apiClient.uploadPhoto(
+      path: '/students/$id/photo',
+      imagePath: imagePath,
+      imageBytes: imageBytes,
+      imageName: imageName,
+    );
     return AppUser.fromJson(data['student']);
   }
 }

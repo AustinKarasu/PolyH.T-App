@@ -73,8 +73,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> uploadProfilePhoto(String imagePath) async {
-    user = await _authService.uploadProfilePhoto(imagePath);
+  Future<void> uploadProfilePhoto({
+    String? imagePath,
+    List<int>? imageBytes,
+    required String imageName,
+  }) async {
+    user = await _authService.uploadProfilePhoto(
+      imagePath: imagePath,
+      imageBytes: imageBytes,
+      imageName: imageName,
+    );
     notifyListeners();
   }
 }

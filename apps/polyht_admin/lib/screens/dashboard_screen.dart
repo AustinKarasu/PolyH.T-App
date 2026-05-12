@@ -291,10 +291,19 @@ class _TestCard extends StatelessWidget {
   }
 
   Future<void> _replacePdf(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
-    final path = result?.files.single.path;
-    if (path == null) return;
-    await TestService().replacePdf(testId: test.id, pdfPath: path);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null || (file.path == null && file.bytes == null)) return;
+    await TestService().replacePdf(
+      testId: test.id,
+      pdfPath: file.path,
+      pdfBytes: file.bytes,
+      pdfName: file.name,
+    );
     onChanged();
   }
 

@@ -41,6 +41,19 @@ async function updateMyPhoto(req, res, next) {
   }
 }
 
+async function changePassword(req, res, next) {
+  try {
+    await authService.changeCurrentUserPassword(req.user.sub, {
+      currentPassword: req.body.currentPassword,
+      newPassword: req.body.newPassword,
+      totpCode: req.body.totpCode
+    });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function setupTwoFactor(req, res, next) {
   try {
     const result = await authService.setupTwoFactor(req.user.sub);
@@ -77,4 +90,14 @@ async function logout(req, res, next) {
   }
 }
 
-module.exports = { login, me, updateMe, updateMyPhoto, setupTwoFactor, enableTwoFactor, disableTwoFactor, logout };
+module.exports = {
+  login,
+  me,
+  updateMe,
+  updateMyPhoto,
+  changePassword,
+  setupTwoFactor,
+  enableTwoFactor,
+  disableTwoFactor,
+  logout
+};

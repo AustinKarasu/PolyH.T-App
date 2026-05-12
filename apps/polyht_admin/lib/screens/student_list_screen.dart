@@ -502,11 +502,16 @@ class _StudentDetailScreenState extends State<_StudentDetailScreen> {
   }
 
   Future<void> _changePhoto() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    final path = result?.files.single.path;
-    if (path == null) return;
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final file = result?.files.single;
+    if (file == null || (file.path == null && file.bytes == null)) return;
     try {
-      final updated = await _service.uploadStudentPhoto(id: student.id, imagePath: path);
+      final updated = await _service.uploadStudentPhoto(
+        id: student.id,
+        imagePath: file.path,
+        imageBytes: file.bytes,
+        imageName: file.name,
+      );
       if (!mounted) return;
       setState(() => student = updated);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student photo updated')));
