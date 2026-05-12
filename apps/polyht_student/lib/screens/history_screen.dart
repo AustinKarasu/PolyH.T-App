@@ -24,8 +24,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<List<StudentTest>> _loadHistory() async {
-    final tests = await _service.fetchTests();
-    return tests.where((test) => test.status == 'ended').toList();
+    return _service.fetchHistory();
   }
 
   @override
@@ -80,6 +79,7 @@ class _HistoryCard extends StatelessWidget {
     final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? AppTheme.ink;
     final muted = textColor.withValues(alpha: 0.62);
     final filename = test.originalFilename ?? 'Question paper';
+    final duration = _formatDuration(test.activeSeconds);
 
     return Container(
       decoration: BoxDecoration(
@@ -121,23 +121,36 @@ class _HistoryCard extends StatelessWidget {
           _InfoRow(icon: Icons.event_rounded, label: 'Class test', value: '${format.format(test.scheduledStart)} - ${format.format(test.scheduledEnd)}'),
           _InfoRow(icon: Icons.login_rounded, label: 'Started', value: test.startedAt == null ? 'Not started' : format.format(test.startedAt!)),
           _InfoRow(icon: Icons.update_rounded, label: 'Last activity', value: test.lastSeenAt == null ? '-' : format.format(test.lastSeenAt!)),
+          _InfoRow(icon: Icons.timer_outlined, label: 'Time spent', value: duration),
           _InfoRow(icon: Icons.check_circle_outline_rounded, label: 'Status', value: test.isCompleted ? 'Submitted' : 'Ended'),
           _InfoRow(icon: Icons.picture_as_pdf_rounded, label: 'Paper', value: filename),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () async {
-                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExamScreen(test: test, reviewOnly: true)));
-                onRefresh();
-              },
-              icon: const Icon(Icons.download_rounded),
-              label: const Text('Download question paper'),
+              onPressed: test.canDownloadAfterEnd
+                  ? () async {
+                      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExamScreen(test: test, reviewOnly: true)));
+                      onRefresh();
+                    }
+                  : null,
+              icon: Icon(test.canDownloadAfterEnd ? Icons.download_rounded : Icons.block_rounded),
+              label: Text(test.canDownloadAfterEnd ? 'Download question paper' : 'Question paper unavailable'),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatDuration(int? seconds) {
+    if (seconds == null || seconds < 0) return '-';
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    if (hours > 0) return '${hours}h ${minutes}m';
+    if (minutes > 0) return '${minutes}m ${secs}s';
+    return '${secs}s';
   }
 }
 

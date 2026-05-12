@@ -15,6 +15,7 @@ const testValidation = [
 ];
 
 router.get('/', authenticate, testController.listTests);
+router.get('/history', authenticate, requireRole('student'), testController.listHistory);
 router.get('/:id/admin/pdf', authenticate, requireRole('admin'), testController.downloadAdminPdf);
 router.get('/:id/pdf', authenticate, testController.downloadPdf);
 

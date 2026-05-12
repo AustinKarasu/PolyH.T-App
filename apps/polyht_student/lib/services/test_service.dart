@@ -11,6 +11,11 @@ class TestService {
     return (data['tests'] as List).map((item) => StudentTest.fromJson(item)).toList();
   }
 
+  Future<List<StudentTest>> fetchHistory() async {
+    final data = await _apiClient.get('/tests/history');
+    return (data['tests'] as List).map((item) => StudentTest.fromJson(item)).toList();
+  }
+
   Future<void> startAttempt(int testId) => _apiClient.post('/attempts/$testId/start', {});
 
   Future<void> completeAttempt(int testId, {String? answerNote}) {

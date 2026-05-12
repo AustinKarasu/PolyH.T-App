@@ -14,6 +14,8 @@ class StudentTest {
     this.lastSeenAt,
     this.completedAt,
     this.pdfSize,
+    this.activeSeconds,
+    this.canDownloadPdf,
   });
 
   final int id;
@@ -30,12 +32,14 @@ class StudentTest {
   final DateTime? lastSeenAt;
   final DateTime? completedAt;
   final int? pdfSize;
+  final int? activeSeconds;
+  final bool? canDownloadPdf;
 
   bool get isLive => status == 'live';
   bool get isLocked => false;
   bool get isCompleted => attemptStatus == 'completed';
   bool get canStart => isLive && !isLocked && !isCompleted;
-  bool get canDownloadAfterEnd => status == 'ended';
+  bool get canDownloadAfterEnd => status == 'ended' && canDownloadPdf != false;
 
   factory StudentTest.fromJson(Map<String, dynamic> json) {
     return StudentTest(
@@ -53,11 +57,19 @@ class StudentTest {
       lastSeenAt: _date(json['last_seen_at']),
       completedAt: _date(json['completed_at']),
       pdfSize: json['pdf_size'] as int?,
+      activeSeconds: _int(json['active_seconds']),
+      canDownloadPdf: json['can_download_pdf'] as bool?,
     );
   }
 
   static DateTime? _date(dynamic value) {
     if (value == null) return null;
     return DateTime.tryParse(value.toString());
+  }
+
+  static int? _int(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
   }
 }

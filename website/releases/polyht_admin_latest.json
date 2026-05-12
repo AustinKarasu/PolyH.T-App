@@ -1,8 +1,8 @@
 {
   "appId": "polyht_admin",
-  "latestVersion": "1.0.17",
-  "latestBuild": 27,
+  "latestVersion": "1.0.18",
+  "latestBuild": 28,
   "mandatory": true,
-  "releaseNotes": "Required update: stores PDFs in the database, fixes admin/student PDF viewing, and adds student test history with ended-paper downloads.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.17/polyht-admin-v1.0.17+27.apk"
+  "releaseNotes": "Required update: connects student test history to the database with ended-test logic, attempt timing, and question-paper download availability.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.18/polyht-admin-v1.0.18+28.apk"
 }

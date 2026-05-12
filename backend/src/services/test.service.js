@@ -61,6 +61,36 @@ async function listStudentTests(user) {
   }));
 }
 
+async function listStudentHistory(user) {
+  const tests = await query(
+    `SELECT t.id, t.title, t.pdf_original_name, t.pdf_size, t.semester,
+            t.scheduled_start, t.scheduled_end, t.time_limit_minutes,
+            (t.pdf_data IS NOT NULL OR t.pdf_path IS NOT NULL) AS has_pdf,
+            a.id AS attempt_id, a.status AS attempt_status,
+            a.started_at, a.last_seen_at, a.completed_at, a.answer_note,
+            CASE
+              WHEN a.started_at IS NOT NULL AND a.completed_at IS NOT NULL
+                THEN EXTRACT(EPOCH FROM (a.completed_at - a.started_at))::INT
+              WHEN a.started_at IS NOT NULL AND a.last_seen_at IS NOT NULL
+                THEN EXTRACT(EPOCH FROM (a.last_seen_at - a.started_at))::INT
+              ELSE NULL
+            END AS active_seconds
+     FROM tests t
+     LEFT JOIN test_attempts a ON a.test_id = t.id AND a.student_id = $1
+     WHERE t.branch_id = $2
+       AND t.semester = $3
+       AND t.scheduled_end < CURRENT_TIMESTAMP
+     ORDER BY t.scheduled_end DESC, t.scheduled_start DESC`,
+    [user.sub, user.branchId, user.semester]
+  );
+
+  return tests.map((test) => ({
+    ...test,
+    status: 'ended',
+    can_download_pdf: Boolean(test.has_pdf)
+  }));
+}
+
 async function updateTest(id, patch) {
   await getTestById(id);
   await query(
@@ -153,4 +183,4 @@ function statusForTest(test) {
   return 'live';
 }
 
-module.exports = { createTest, listAdminTests, listStudentTests, updateTest, setTestActive, endTestNow, replacePdf, removeTest, getStudentPdf, getAdminPdf };
+module.exports = { createTest, listAdminTests, listStudentTests, listStudentHistory, updateTest, setTestActive, endTestNow, replacePdf, removeTest, getStudentPdf, getAdminPdf };

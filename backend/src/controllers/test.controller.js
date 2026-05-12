@@ -29,6 +29,15 @@ async function listTests(req, res, next) {
   }
 }
 
+async function listHistory(req, res, next) {
+  try {
+    const tests = await testService.listStudentHistory(req.user);
+    res.json({ tests });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function updateTest(req, res, next) {
   try {
     const test = await testService.updateTest(Number(req.params.id), {
@@ -125,6 +134,7 @@ function safeDownloadName(name) {
 module.exports = {
   createTest,
   listTests,
+  listHistory,
   updateTest,
   setTestActive,
   endTestNow,
