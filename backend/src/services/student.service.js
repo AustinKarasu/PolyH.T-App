@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { query } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
+const storageService = require('./storage.service');
 
 const STUDENT_SELECT = `
   SELECT u.id, u.full_name, u.email, u.college_id, u.role, u.branch_id,
@@ -18,7 +19,7 @@ async function getStudentProfile(userId) {
 }
 
 async function updateStudentProfile(userId, patch) {
-  const allowed = ['phone', 'address', 'guardian_name'];
+  const allowed = ['email', 'phone', 'address', 'guardian_name'];
   const sets = [];
   const params = [];
   let idx = 1;
@@ -34,6 +35,16 @@ async function updateStudentProfile(userId, patch) {
 
   params.push(userId);
   await query(`UPDATE users SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx}`, params);
+  return getStudentProfile(userId);
+}
+
+async function updateStudentPhoto(userId, file) {
+  if (!file) throw new ApiError(422, 'Profile photo is required');
+  const photoUrl = await storageService.saveProfilePhoto(file);
+  await query(
+    'UPDATE users SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND role = $3',
+    [photoUrl, userId, 'student']
+  );
   return getStudentProfile(userId);
 }
 
@@ -118,7 +129,7 @@ async function adminCreateStudent(payload) {
 
 async function adminUpdateStudent(studentId, patch) {
   const allowed = [
-    'full_name', 'dob', 'semester', 'roll_no', 'board_roll_no',
+    'full_name', 'email', 'college_id', 'dob', 'semester', 'roll_no', 'board_roll_no',
     'college_name', 'course_name', 'guardian_name', 'phone',
     'address', 'admission_year', 'is_active', 'branch_id'
   ];
@@ -133,21 +144,43 @@ async function adminUpdateStudent(studentId, patch) {
       params.push(patch[camelKey]);
     }
   }
+  if (patch.password !== undefined && patch.password !== '') {
+    sets.push(`password_hash = $${idx++}`);
+    params.push(await bcrypt.hash(patch.password, 12));
+  }
   if (sets.length === 0) throw new ApiError(422, 'No valid fields to update');
 
   params.push(studentId);
-  await query(
-    `UPDATE users SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx} AND role = 'student'`,
-    params
-  );
+  try {
+    await query(
+      `UPDATE users SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx} AND role = 'student'`,
+      params
+    );
+  } catch (err) {
+    if (err.code === '23505') {
+      throw new ApiError(409, 'A user with this email or college ID already exists');
+    }
+    throw err;
+  }
   return getStudentById(studentId);
+}
+
+async function adminDeleteStudent(studentId) {
+  const student = await getStudentById(studentId);
+  await query('DELETE FROM exam_events WHERE student_id = $1', [studentId]);
+  await query('DELETE FROM test_attempts WHERE student_id = $1', [studentId]);
+  await query('DELETE FROM auth_sessions WHERE user_id = $1', [studentId]);
+  await query('DELETE FROM users WHERE id = $1 AND role = $2', [studentId, 'student']);
+  return student;
 }
 
 module.exports = {
   getStudentProfile,
   updateStudentProfile,
+  updateStudentPhoto,
   listAllStudents,
   getStudentById,
   adminCreateStudent,
-  adminUpdateStudent
+  adminUpdateStudent,
+  adminDeleteStudent
 };

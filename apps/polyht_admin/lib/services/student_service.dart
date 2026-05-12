@@ -51,4 +51,44 @@ class StudentService {
     });
     return AppUser.fromJson(data['student']);
   }
+
+  Future<AppUser> updateStudent({
+    required int id,
+    required String fullName,
+    required int branchId,
+    String? email,
+    String? collegeId,
+    String? password,
+    int? semester,
+    String? rollNo,
+    String? boardRollNo,
+    String? courseName,
+    String? guardianName,
+    String? phone,
+    String? address,
+    int? admissionYear,
+    bool? isActive,
+  }) async {
+    final data = await _apiClient.patch('/students/$id', {
+      'fullName': fullName,
+      'branchId': branchId,
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (collegeId != null && collegeId.isNotEmpty) 'collegeId': collegeId,
+      if (password != null && password.isNotEmpty) 'password': password,
+      if (semester != null) 'semester': semester,
+      if (rollNo != null && rollNo.isNotEmpty) 'rollNo': rollNo,
+      if (boardRollNo != null && boardRollNo.isNotEmpty) 'boardRollNo': boardRollNo,
+      if (courseName != null && courseName.isNotEmpty) 'courseName': courseName,
+      if (guardianName != null && guardianName.isNotEmpty) 'guardianName': guardianName,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (admissionYear != null) 'admissionYear': admissionYear,
+      if (isActive != null) 'isActive': isActive,
+    });
+    return AppUser.fromJson(data['student']);
+  }
+
+  Future<void> deleteStudent(int id) async {
+    await _apiClient.delete('/students/$id');
+  }
 }

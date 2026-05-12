@@ -30,6 +30,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   late DateTime _startedAt;
   Timer? _timer;
   int _elapsedSeconds = 0;
+  bool _completedByTimer = false;
 
   @override
   void initState() {
@@ -52,6 +53,10 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() => _elapsedSeconds = DateTime.now().difference(_startedAt).inSeconds);
+        if (!_locked && !_completedByTimer && _elapsedSeconds >= widget.test.timeLimitMinutes * 60) {
+          _completedByTimer = true;
+          unawaited(_complete(autoSubmitted: true));
+        }
       }
     });
   }
@@ -79,6 +84,10 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     }
     if (state == AppLifecycleState.detached) {
       unawaited(_logEvent('app_detached'));
+    }
+    if (state == AppLifecycleState.hidden) {
+      setState(() => _hasFocusWarning = true);
+      unawaited(_logEvent('app_hidden'));
     }
   }
 
@@ -324,12 +333,28 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _complete() async {
+  Future<void> _complete({bool autoSubmitted = false}) async {
     if (_locked) return;
-    await _testService.completeAttempt(widget.test.id);
-    await _securityService.exitExamMode();
-    if (mounted) {
-      Navigator.of(context).pop();
+    try {
+      if (autoSubmitted) {
+        await _testService.recordEvent(widget.test.id, 'time_limit_reached');
+      }
+      await _testService.completeAttempt(widget.test.id);
+      await _deleteLocalPdf();
+      await _securityService.exitExamMode();
+      if (mounted) {
+        if (autoSubmitted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Time limit reached. Test submitted.')));
+        }
+        Navigator.of(context).pop();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _locked = true;
+          _hasFocusWarning = true;
+        });
+      }
     }
   }
 

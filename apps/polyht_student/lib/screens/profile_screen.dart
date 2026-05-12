@@ -1,11 +1,20 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
+import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _saving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +25,13 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Profile'),
         flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
+        actions: [
+          IconButton(
+            tooltip: 'Edit profile',
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: _saving ? null : () => _editProfile(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -32,19 +48,33 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
-                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
+                  InkWell(
+                    onTap: _saving ? null : () => _pickPhoto(context),
+                    customBorder: const CircleBorder(),
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 42,
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          backgroundImage: user.photoUrl == null ? null : NetworkImage(_photoUrl(user.photoUrl!)),
+                          child: user.photoUrl == null
+                              ? Text(
+                                  user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: const BoxDecoration(color: AppTheme.secondary, shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -106,6 +136,97 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
       child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
     );
+  }
+
+  String _photoUrl(String value) {
+    if (value.startsWith('http')) return value;
+    final base = ApiConfig.baseUrl.replaceFirst(RegExp(r'/api$'), '');
+    return '$base$value';
+  }
+
+  Future<void> _pickPhoto(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final path = result?.files.single.path;
+    if (path == null || !context.mounted) return;
+    setState(() => _saving = true);
+    try {
+      await context.read<AuthProvider>().uploadProfilePhoto(path);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated')));
+      }
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _editProfile(BuildContext context) async {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+    final emailController = TextEditingController(text: user.email ?? '');
+    final phoneController = TextEditingController(text: user.phone ?? '');
+    final guardianController = TextEditingController(text: user.guardianName ?? '');
+    final addressController = TextEditingController(text: user.address ?? '');
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 44, height: 4, decoration: BoxDecoration(color: AppTheme.primaryLight.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(99))),
+            const SizedBox(height: 16),
+            Text('Edit Personal Details', style: Theme.of(sheetContext).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            TextField(controller: emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email')),
+            const SizedBox(height: 12),
+            TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+            const SizedBox(height: 12),
+            TextField(controller: guardianController, decoration: const InputDecoration(labelText: 'Guardian name')),
+            const SizedBox(height: 12),
+            TextField(controller: addressController, maxLines: 3, decoration: const InputDecoration(labelText: 'Address')),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(sheetContext).pop(true),
+              icon: const Icon(Icons.save_rounded),
+              label: const Text('Save Profile'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved != true || !context.mounted) return;
+    setState(() => _saving = true);
+    try {
+      await context.read<AuthProvider>().updateProfile(
+        email: emailController.text.trim(),
+        phone: phoneController.text.trim(),
+        guardianName: guardianController.text.trim(),
+        address: addressController.text.trim(),
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
+      }
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+      }
+    } finally {
+      emailController.dispose();
+      phoneController.dispose();
+      guardianController.dispose();
+      addressController.dispose();
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }
 

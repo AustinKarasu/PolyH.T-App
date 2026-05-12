@@ -38,6 +38,29 @@ async function savePdf(file) {
   return { key: file.filename, path: file.path };
 }
 
+async function saveProfilePhoto(file) {
+  if (env.storage.driver === 's3') {
+    if (!env.storage.s3.bucket) {
+      throw new ApiError(500, 'S3 bucket is not configured');
+    }
+    const key = `profile-photos/${Date.now()}-${safeName(file.originalname)}`;
+    await getS3Client().send(new PutObjectCommand({
+      Bucket: env.storage.s3.bucket,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype || 'application/octet-stream'
+    }));
+    if (env.storage.s3.publicBaseUrl) {
+      return `${env.storage.s3.publicBaseUrl.replace(/\/$/, '')}/${key}`;
+    }
+    return key;
+  }
+
+  const filename = file.filename || `${Date.now()}-${safeName(file.originalname)}`;
+  const fullPath = file.path || path.resolve(env.uploadDir, filename);
+  return `/uploads/${path.basename(fullPath)}`;
+}
+
 async function deletePdf(filePathOrKey) {
   if (!filePathOrKey) return;
   if (env.storage.driver === 's3') {
@@ -62,11 +85,16 @@ async function getPdfDelivery(filePathOrKey) {
     );
     return { type: 'redirect', value: url };
   }
-  return { type: 'file', value: path.resolve(env.uploadDir, path.basename(filePathOrKey)) };
+  return {
+    type: 'file',
+    value: path.isAbsolute(filePathOrKey)
+      ? filePathOrKey
+      : path.resolve(env.uploadDir, path.basename(filePathOrKey))
+  };
 }
 
 function safeName(name) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-module.exports = { savePdf, deletePdf, getPdfDelivery };
+module.exports = { savePdf, saveProfilePhoto, deletePdf, getPdfDelivery };

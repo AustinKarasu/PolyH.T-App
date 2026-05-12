@@ -270,19 +270,21 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? AppTheme.ink;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: AppTheme.primaryLight.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: AppTheme.primary),
+            Icon(icon, size: 22, color: isDark ? AppTheme.primaryLight : AppTheme.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -290,20 +292,20 @@ class _ActionTile extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: textColor),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle!,
-                      style: TextStyle(fontSize: 11, color: AppTheme.ink.withValues(alpha: 0.4)),
+                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.45)),
                     ),
                 ],
               ),
             ),
             if (trailing != null) trailing!,
-            if (trailing == null) Icon(Icons.chevron_right, size: 20, color: AppTheme.ink.withValues(alpha: 0.3)),
+            if (trailing == null) Icon(Icons.chevron_right, size: 20, color: textColor.withValues(alpha: 0.35)),
           ],
         ),
       ),

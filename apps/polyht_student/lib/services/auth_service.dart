@@ -37,4 +37,24 @@ class AuthService {
     await _apiClient.postEmpty('/auth/logout').catchError((_) {});
     await _tokenStorage.clear();
   }
+
+  Future<AppUser> updateProfile({
+    String? email,
+    String? phone,
+    String? guardianName,
+    String? address,
+  }) async {
+    final data = await _apiClient.patch('/students/me', {
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      if (guardianName != null) 'guardianName': guardianName,
+      if (address != null) 'address': address,
+    });
+    return AppUser.fromJson(data['student'] as Map<String, dynamic>);
+  }
+
+  Future<AppUser> uploadProfilePhoto(String imagePath) async {
+    final data = await _apiClient.uploadProfilePhoto(imagePath);
+    return AppUser.fromJson(data['student'] as Map<String, dynamic>);
+  }
 }

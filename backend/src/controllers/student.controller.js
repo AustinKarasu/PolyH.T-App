@@ -18,6 +18,15 @@ async function updateProfile(req, res, next) {
   }
 }
 
+async function updatePhoto(req, res, next) {
+  try {
+    const student = await studentService.updateStudentPhoto(req.user.sub, req.file);
+    res.json({ student });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listStudents(req, res, next) {
   try {
     const result = await studentService.listAllStudents(req.query);
@@ -57,4 +66,22 @@ async function adminUpdateStudent(req, res, next) {
   }
 }
 
-module.exports = { getProfile, updateProfile, listStudents, getStudentById, adminCreateStudent, adminUpdateStudent };
+async function adminDeleteStudent(req, res, next) {
+  try {
+    await studentService.adminDeleteStudent(Number(req.params.id));
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  updatePhoto,
+  listStudents,
+  getStudentById,
+  adminCreateStudent,
+  adminUpdateStudent,
+  adminDeleteStudent
+};

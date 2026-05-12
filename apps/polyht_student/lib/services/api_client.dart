@@ -12,10 +12,10 @@ class ApiClient {
 
   final TokenStorage _tokenStorage;
 
-  Future<Map<String, String>> _headers() async {
+  Future<Map<String, String>> _headers({bool jsonBody = true}) async {
     final token = await _tokenStorage.readToken();
     return {
-      'Content-Type': 'application/json',
+      if (jsonBody) 'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -42,6 +42,24 @@ class ApiClient {
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: await _headers(),
     );
+    return _decode(response);
+  }
+
+  Future<dynamic> patch(String path, Map<String, dynamic> body) async {
+    final response = await http.patch(
+      Uri.parse('${ApiConfig.baseUrl}$path'),
+      headers: await _headers(),
+      body: jsonEncode(body),
+    );
+    return _decode(response);
+  }
+
+  Future<dynamic> uploadProfilePhoto(String imagePath) async {
+    final request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}/students/me/photo'));
+    request.headers.addAll(await _headers(jsonBody: false));
+    request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
     return _decode(response);
   }
 

@@ -20,11 +20,25 @@ const pdfUpload = multer({
   storage: env.storage.driver === 's3' ? multer.memoryStorage() : diskStorage,
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype !== 'application/pdf') {
+    const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
       return cb(new ApiError(422, 'Only PDF files are allowed'));
     }
     return cb(null, true);
   }
 });
 
-module.exports = { pdfUpload };
+const imageUpload = multer({
+  storage: env.storage.driver === 's3' ? multer.memoryStorage() : diskStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const name = file.originalname.toLowerCase();
+    const isImage = file.mimetype.startsWith('image/') || /\.(png|jpe?g|webp)$/.test(name);
+    if (!isImage) {
+      return cb(new ApiError(422, 'Only PNG, JPG, or WEBP images are allowed'));
+    }
+    return cb(null, true);
+  }
+});
+
+module.exports = { pdfUpload, imageUpload };

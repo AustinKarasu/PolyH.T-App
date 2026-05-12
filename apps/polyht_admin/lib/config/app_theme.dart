@@ -112,6 +112,8 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: isDark ? primaryLight : primary, foregroundColor: isDark ? darkBg : Colors.white,
+          disabledBackgroundColor: isDark ? darkCard : primaryLight.withValues(alpha: 0.35),
+          disabledForegroundColor: isDark ? darkInk.withValues(alpha: 0.55) : ink.withValues(alpha: 0.45),
           elevation: 2, shadowColor: primary.withValues(alpha: 0.4),
           minimumSize: const Size.fromHeight(52),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -134,7 +136,13 @@ class AppTheme {
       ),
 
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(backgroundColor: isDark ? primaryLight : primary, foregroundColor: isDark ? darkBg : Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd))),
+        style: FilledButton.styleFrom(
+          backgroundColor: isDark ? primaryLight : primary,
+          foregroundColor: isDark ? darkBg : Colors.white,
+          disabledBackgroundColor: isDark ? darkCard : primaryLight.withValues(alpha: 0.35),
+          disabledForegroundColor: isDark ? darkInk.withValues(alpha: 0.55) : ink.withValues(alpha: 0.45),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+        ),
       ),
 
       cardTheme: CardThemeData(
