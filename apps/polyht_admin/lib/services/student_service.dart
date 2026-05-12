@@ -8,7 +8,7 @@ class StudentService {
   Future<List<AppUser>> fetchStudents({int? branchId, String? search}) async {
     final params = <String>[];
     if (branchId != null) params.add('branchId=$branchId');
-    if (search != null && search.isNotEmpty) params.add('search=$search');
+    if (search != null && search.isNotEmpty) params.add('search=${Uri.encodeQueryComponent(search)}');
     final query = params.isEmpty ? '' : '?${params.join('&')}';
     final data = await _apiClient.get('/students$query');
     return (data['students'] as List).map((j) => AppUser.fromJson(j)).toList();
@@ -16,6 +16,39 @@ class StudentService {
 
   Future<AppUser> fetchStudent(int id) async {
     final data = await _apiClient.get('/students/$id');
+    return AppUser.fromJson(data['student']);
+  }
+
+  Future<AppUser> createStudent({
+    required String fullName,
+    required String collegeId,
+    required String password,
+    required int branchId,
+    String? email,
+    int? semester,
+    String? rollNo,
+    String? boardRollNo,
+    String? courseName,
+    String? guardianName,
+    String? phone,
+    String? address,
+    int? admissionYear,
+  }) async {
+    final data = await _apiClient.post('/students', {
+      'fullName': fullName,
+      'collegeId': collegeId,
+      'password': password,
+      'branchId': branchId,
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (semester != null) 'semester': semester,
+      if (rollNo != null && rollNo.isNotEmpty) 'rollNo': rollNo,
+      if (boardRollNo != null && boardRollNo.isNotEmpty) 'boardRollNo': boardRollNo,
+      if (courseName != null && courseName.isNotEmpty) 'courseName': courseName,
+      if (guardianName != null && guardianName.isNotEmpty) 'guardianName': guardianName,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (admissionYear != null) 'admissionYear': admissionYear,
+    });
     return AppUser.fromJson(data['student']);
   }
 }

@@ -21,6 +21,36 @@ router.patch(
 
 // Admin endpoints
 router.get('/', authenticate, requireRole('admin'), studentController.listStudents);
+router.post(
+  '/',
+  authenticate,
+  requireRole('admin'),
+  [
+    body('fullName').trim().isLength({ min: 2, max: 120 }),
+    body('collegeId').trim().isLength({ min: 2, max: 60 }),
+    body('password').isStrongPassword({
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    }),
+    body('branchId').isInt({ min: 1 }),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail(),
+    body('dob').optional({ nullable: true, checkFalsy: true }).isISO8601(),
+    body('semester').optional({ nullable: true, checkFalsy: true }).isInt({ min: 1, max: 8 }),
+    body('rollNo').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 40 }),
+    body('boardRollNo').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 40 }),
+    body('collegeName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 200 }),
+    body('courseName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+    body('guardianName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+    body('phone').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 20 }),
+    body('address').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 500 }),
+    body('admissionYear').optional({ nullable: true, checkFalsy: true }).isInt({ min: 2000, max: 2100 })
+  ],
+  validate,
+  studentController.adminCreateStudent
+);
 router.get('/:id', authenticate, requireRole('admin'), studentController.getStudentById);
 router.patch(
   '/:id',

@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const { query } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 
@@ -77,6 +78,44 @@ async function getStudentById(studentId) {
   return rows[0];
 }
 
+async function adminCreateStudent(payload) {
+  const passwordHash = await bcrypt.hash(payload.password, 12);
+  try {
+    const rows = await query(
+      `INSERT INTO users (
+        full_name, email, college_id, password_hash, role, branch_id,
+        dob, semester, roll_no, board_roll_no, college_name, course_name,
+        guardian_name, phone, address, admission_year, is_active
+      )
+      VALUES ($1, $2, $3, $4, 'student', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, TRUE)
+      RETURNING id`,
+      [
+        payload.fullName,
+        payload.email || null,
+        payload.collegeId,
+        passwordHash,
+        payload.branchId,
+        payload.dob || null,
+        payload.semester || null,
+        payload.rollNo || null,
+        payload.boardRollNo || null,
+        payload.collegeName || 'Govt. Polytechnic Kangra',
+        payload.courseName || null,
+        payload.guardianName || null,
+        payload.phone || null,
+        payload.address || null,
+        payload.admissionYear || null
+      ]
+    );
+    return getStudentById(rows[0].id);
+  } catch (err) {
+    if (err.code === '23505') {
+      throw new ApiError(409, 'A user with this email or college ID already exists');
+    }
+    throw err;
+  }
+}
+
 async function adminUpdateStudent(studentId, patch) {
   const allowed = [
     'full_name', 'dob', 'semester', 'roll_no', 'board_roll_no',
@@ -104,4 +143,11 @@ async function adminUpdateStudent(studentId, patch) {
   return getStudentById(studentId);
 }
 
-module.exports = { getStudentProfile, updateStudentProfile, listAllStudents, getStudentById, adminUpdateStudent };
+module.exports = {
+  getStudentProfile,
+  updateStudentProfile,
+  listAllStudents,
+  getStudentById,
+  adminCreateStudent,
+  adminUpdateStudent
+};

@@ -130,6 +130,30 @@ Response:
 }
 ```
 
+`POST /students`
+
+Admin only. Creates a student login account:
+
+```json
+{
+  "fullName": "Student Name",
+  "collegeId": "GPK-CE-2026-001",
+  "password": "Strong@123",
+  "branchId": 1,
+  "email": "student@example.edu",
+  "semester": 3,
+  "rollNo": "CE-042",
+  "boardRollNo": "HP-2026-042",
+  "courseName": "Diploma in Computer Engineering",
+  "guardianName": "Guardian Name",
+  "phone": "9876543210",
+  "address": "Kangra, Himachal Pradesh",
+  "admissionYear": 2026
+}
+```
+
+The student logs in with `collegeId` and `password` in the Student app.
+
 `GET /students/:id`
 
 Admin only. Returns a single student's full profile.

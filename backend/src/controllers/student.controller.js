@@ -36,6 +36,15 @@ async function getStudentById(req, res, next) {
   }
 }
 
+async function adminCreateStudent(req, res, next) {
+  try {
+    const student = await studentService.adminCreateStudent(req.body);
+    res.status(201).json({ student });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function adminUpdateStudent(req, res, next) {
   try {
     const student = await studentService.adminUpdateStudent(
@@ -48,4 +57,4 @@ async function adminUpdateStudent(req, res, next) {
   }
 }
 
-module.exports = { getProfile, updateProfile, listStudents, getStudentById, adminUpdateStudent };
+module.exports = { getProfile, updateProfile, listStudents, getStudentById, adminCreateStudent, adminUpdateStudent };

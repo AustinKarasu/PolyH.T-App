@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
 import '../models/app_user.dart';
+import '../models/branch.dart';
 import '../services/student_service.dart';
+import '../services/test_service.dart';
 
 class StudentListScreen extends StatefulWidget {
   const StudentListScreen({super.key});
@@ -38,6 +40,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
       appBar: AppBar(
         title: const Text('Student Directory'),
         flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddStudent,
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: const Text('Add Student'),
       ),
       body: Column(
         children: [
@@ -95,6 +102,204 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   void _showDetail(BuildContext context, AppUser student) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => _StudentDetailScreen(student: student)));
+  }
+
+  Future<void> _openAddStudent() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const _AddStudentScreen()),
+    );
+    if (created == true && mounted) {
+      setState(() => _students = _service.fetchStudents(search: _searchController.text.trim()));
+    }
+  }
+}
+
+class _AddStudentScreen extends StatefulWidget {
+  const _AddStudentScreen();
+
+  @override
+  State<_AddStudentScreen> createState() => _AddStudentScreenState();
+}
+
+class _AddStudentScreenState extends State<_AddStudentScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _studentService = StudentService();
+  final _testService = TestService();
+  final _fullNameController = TextEditingController();
+  final _collegeIdController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _semesterController = TextEditingController();
+  final _rollNoController = TextEditingController();
+  final _boardRollNoController = TextEditingController();
+  final _courseController = TextEditingController();
+  final _guardianController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _admissionYearController = TextEditingController();
+  late Future<List<Branch>> _branches;
+  Branch? _selectedBranch;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _branches = _testService.fetchBranches();
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _collegeIdController.dispose();
+    _passwordController.dispose();
+    _emailController.dispose();
+    _semesterController.dispose();
+    _rollNoController.dispose();
+    _boardRollNoController.dispose();
+    _courseController.dispose();
+    _guardianController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _admissionYearController.dispose();
+    super.dispose();
+  }
+
+  String? _required(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    return null;
+  }
+
+  String? _strongPassword(String? value) {
+    final password = value ?? '';
+    if (password.length < 8) return 'Use at least 8 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'Add an uppercase letter';
+    if (!RegExp(r'[a-z]').hasMatch(password)) return 'Add a lowercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(password)) return 'Add a number';
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) return 'Add a symbol';
+    return null;
+  }
+
+  int? _optionalInt(TextEditingController controller) {
+    final text = controller.text.trim();
+    return text.isEmpty ? null : int.tryParse(text);
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedBranch == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a branch')));
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await _studentService.createStudent(
+        fullName: _fullNameController.text.trim(),
+        collegeId: _collegeIdController.text.trim(),
+        password: _passwordController.text,
+        branchId: _selectedBranch!.id,
+        email: _emailController.text.trim(),
+        semester: _optionalInt(_semesterController),
+        rollNo: _rollNoController.text.trim(),
+        boardRollNo: _boardRollNoController.text.trim(),
+        courseName: _courseController.text.trim(),
+        guardianName: _guardianController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        admissionYear: _optionalInt(_admissionYearController),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student account created')));
+      Navigator.of(context).pop(true);
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add Student'),
+        flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
+      ),
+      body: FutureBuilder<List<Branch>>(
+        future: _branches,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+          }
+          final branches = snapshot.data ?? [];
+          return Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                TextFormField(
+                  controller: _fullNameController,
+                  decoration: const InputDecoration(labelText: 'Full name'),
+                  validator: _required,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _collegeIdController,
+                  decoration: const InputDecoration(labelText: 'College ID / Login ID'),
+                  validator: _required,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<Branch>(
+                  value: _selectedBranch,
+                  decoration: const InputDecoration(labelText: 'Branch'),
+                  items: branches.map((branch) {
+                    return DropdownMenuItem(value: branch, child: Text('${branch.name} (${branch.code})'));
+                  }).toList(),
+                  onChanged: _saving ? null : (branch) => setState(() => _selectedBranch = branch),
+                  validator: (value) => value == null ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Temporary password'),
+                  validator: _strongPassword,
+                ),
+                const SizedBox(height: 18),
+                Text('Optional profile details', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _semesterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Semester')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _rollNoController, decoration: const InputDecoration(labelText: 'Roll no')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _boardRollNoController, decoration: const InputDecoration(labelText: 'Board roll no')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _courseController, decoration: const InputDecoration(labelText: 'Course')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _guardianController, decoration: const InputDecoration(labelText: 'Guardian name')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _admissionYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Admission year')),
+                const SizedBox(height: 12),
+                TextFormField(controller: _addressController, maxLines: 3, decoration: const InputDecoration(labelText: 'Address')),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.person_add_alt_1_rounded),
+                  label: Text(_saving ? 'Creating...' : 'Create Student'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
