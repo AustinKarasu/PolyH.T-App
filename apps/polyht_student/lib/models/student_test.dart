@@ -10,6 +10,10 @@ class StudentTest {
     this.originalFilename,
     this.attemptStatus,
     this.blockedReason,
+    this.startedAt,
+    this.lastSeenAt,
+    this.completedAt,
+    this.pdfSize,
   });
 
   final int id;
@@ -22,12 +26,16 @@ class StudentTest {
   final String? originalFilename;
   final String? attemptStatus;
   final String? blockedReason;
+  final DateTime? startedAt;
+  final DateTime? lastSeenAt;
+  final DateTime? completedAt;
+  final int? pdfSize;
 
   bool get isLive => status == 'live';
   bool get isLocked => false;
   bool get isCompleted => attemptStatus == 'completed';
   bool get canStart => isLive && !isLocked && !isCompleted;
-  bool get canDownloadAfterEnd => status == 'ended' && isCompleted;
+  bool get canDownloadAfterEnd => status == 'ended';
 
   factory StudentTest.fromJson(Map<String, dynamic> json) {
     return StudentTest(
@@ -38,9 +46,18 @@ class StudentTest {
       semester: json['semester'] as int? ?? 1,
       timeLimitMinutes: json['time_limit_minutes'] as int,
       status: json['status'] as String,
-      originalFilename: json['original_filename'] as String?,
+      originalFilename: (json['pdf_original_name'] as String?) ?? (json['original_filename'] as String?),
       attemptStatus: json['attempt_status'] as String?,
       blockedReason: json['blocked_reason'] as String?,
+      startedAt: _date(json['started_at']),
+      lastSeenAt: _date(json['last_seen_at']),
+      completedAt: _date(json['completed_at']),
+      pdfSize: json['pdf_size'] as int?,
     );
+  }
+
+  static DateTime? _date(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString());
   }
 }

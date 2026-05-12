@@ -197,6 +197,23 @@ async function assertCompletedPdfAccess(testId, user, context = {}) {
   });
 }
 
+async function recordEndedPdfAccess(test, user, context = {}) {
+  const attempt = await getAttemptByStudent(test.id, user.sub);
+  if (attempt) {
+    await query('UPDATE test_attempts SET last_seen_at = CURRENT_TIMESTAMP WHERE id = $1', [attempt.id]);
+  }
+
+  await recordEvent({
+    attemptId: attempt?.id || null,
+    testId: test.id,
+    studentId: user.sub,
+    branchId: test.branch_id,
+    eventType: 'ended_pdf_downloaded',
+    message: 'Student downloaded the question paper after the test ended.',
+    context
+  });
+}
+
 async function getAssignedLiveTestForUser(testId, user) {
   const rows = await query(
     `SELECT * FROM tests
@@ -227,5 +244,6 @@ module.exports = {
   listLockedAttempts,
   allowAttempt,
   assertLivePdfAccess,
-  assertCompletedPdfAccess
+  assertCompletedPdfAccess,
+  recordEndedPdfAccess
 };

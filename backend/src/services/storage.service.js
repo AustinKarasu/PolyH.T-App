@@ -38,6 +38,12 @@ async function savePdf(file) {
   return { key: file.filename, path: file.path };
 }
 
+async function getUploadedFileBytes(file) {
+  if (file.buffer) return file.buffer;
+  if (file.path) return fs.readFile(file.path);
+  throw new ApiError(422, 'PDF file could not be read');
+}
+
 async function saveProfilePhoto(file) {
   const inferredType = contentTypeForName(file.originalname);
   const contentType = !file.mimetype || file.mimetype === 'application/octet-stream'
@@ -83,7 +89,15 @@ async function deletePdf(filePathOrKey) {
   await fs.unlink(filePathOrKey).catch(() => {});
 }
 
-async function getPdfDelivery(filePathOrKey) {
+async function getPdfDelivery(filePathOrKey, test = null) {
+  if (test?.pdf_data) {
+    return {
+      type: 'buffer',
+      value: Buffer.isBuffer(test.pdf_data) ? test.pdf_data : Buffer.from(test.pdf_data),
+      filename: test.pdf_original_name || `polyht-test-${test.id}.pdf`,
+      contentType: test.pdf_mime_type || 'application/pdf'
+    };
+  }
   if (env.storage.driver === 's3') {
     if (!env.storage.s3.bucket) {
       throw new ApiError(500, 'S3 bucket is not configured');
@@ -115,4 +129,4 @@ function contentTypeForName(name) {
   return null;
 }
 
-module.exports = { savePdf, saveProfilePhoto, deletePdf, getPdfDelivery };
+module.exports = { savePdf, saveProfilePhoto, deletePdf, getPdfDelivery, getUploadedFileBytes };

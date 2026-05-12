@@ -22,6 +22,11 @@ async function ensureRuntimeSchema() {
       ALTER TABLE tests
         ADD COLUMN IF NOT EXISTS semester SMALLINT NOT NULL DEFAULT 1;
       ALTER TABLE tests
+        ADD COLUMN IF NOT EXISTS pdf_data BYTEA,
+        ADD COLUMN IF NOT EXISTS pdf_original_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS pdf_mime_type VARCHAR(120) DEFAULT 'application/pdf',
+        ADD COLUMN IF NOT EXISTS pdf_size INT;
+      ALTER TABLE tests
         DROP CONSTRAINT IF EXISTS tests_semester_check;
       ALTER TABLE tests
         ADD CONSTRAINT tests_semester_check CHECK (semester BETWEEN 1 AND 6);

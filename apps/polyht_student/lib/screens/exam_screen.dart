@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:flutter/services.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../config/app_theme.dart';
 import '../models/student_test.dart';
@@ -29,6 +30,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   bool _hasFocusWarning = false;
   bool _locked = false;
   String? _errorMessage;
+  bool _pdfViewerFailed = false;
   int _currentPage = 0;
   int _totalPages = 0;
   late DateTime _startedAt;
@@ -280,14 +282,29 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                             ),
                           ),
                         )
-                      : _pdfPath == null
+                      : _pdfPath == null || _pdfViewerFailed
                           ? Center(
                               child: Padding(
                                 padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  _errorMessage ?? 'Unable to open PDF.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.65)),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.picture_as_pdf_outlined, size: 56, color: AppTheme.error),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _errorMessage ?? 'Unable to open PDF.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.65)),
+                                    ),
+                                    if (_pdfPath != null) ...[
+                                      const SizedBox(height: 16),
+                                      FilledButton.icon(
+                                        onPressed: () => OpenFilex.open(_pdfPath!, type: 'application/pdf'),
+                                        icon: const Icon(Icons.open_in_new_rounded),
+                                        label: const Text('Open with PDF app'),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             )
@@ -300,11 +317,11 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                               onRender: (pages) => setState(() => _totalPages = pages ?? 0),
                               onPageChanged: (page, _) => setState(() => _currentPage = page ?? 0),
                               onError: (error) => setState(() {
-                                _pdfPath = null;
+                                _pdfViewerFailed = true;
                                 _errorMessage = 'Unable to display this PDF. Please ask the admin to re-upload it.';
                               }),
                               onPageError: (_, error) => setState(() {
-                                _pdfPath = null;
+                                _pdfViewerFailed = true;
                                 _errorMessage = 'Unable to display this PDF page. Please ask the admin to re-upload it.';
                               }),
                             ),
@@ -327,6 +344,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _pdfPath = path;
+          _pdfViewerFailed = false;
           _loading = false;
         });
       }
@@ -356,6 +374,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _pdfPath = path;
+          _pdfViewerFailed = false;
           _loading = false;
         });
       }

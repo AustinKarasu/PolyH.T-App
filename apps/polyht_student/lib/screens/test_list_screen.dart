@@ -321,9 +321,9 @@ class _StudentTestCard extends StatelessWidget {
                   disabledBackgroundColor: AppTheme.primaryLight.withValues(alpha: 0.08),
                   disabledForegroundColor: AppTheme.ink.withValues(alpha: 0.3),
                 ),
-                icon: Icon(test.canDownloadAfterEnd ? Icons.download_rounded : test.isLocked ? Icons.lock_rounded : Icons.play_arrow_rounded),
+                icon: Icon(test.canDownloadAfterEnd ? Icons.picture_as_pdf_rounded : test.isLocked ? Icons.lock_rounded : Icons.play_arrow_rounded),
                 label: Text(test.canDownloadAfterEnd
-                    ? 'Download paper'
+                    ? 'View question paper'
                     : test.isCompleted
                         ? 'Submitted'
                         : test.isLocked

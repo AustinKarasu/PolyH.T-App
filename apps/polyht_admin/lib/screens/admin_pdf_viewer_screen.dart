@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../config/app_theme.dart';
 
@@ -67,6 +68,12 @@ class _AdminPdfViewerScreenState extends State<AdminPdfViewerScreen> {
                     const Text('Unable to open PDF', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => OpenFilex.open(widget.filePath, type: 'application/pdf'),
+                      icon: const Icon(Icons.open_in_new_rounded),
+                      label: const Text('Open with PDF app'),
+                    ),
                   ],
                 ),
               ),

@@ -1,0 +1,5 @@
+ALTER TABLE tests
+  ADD COLUMN IF NOT EXISTS pdf_data BYTEA,
+  ADD COLUMN IF NOT EXISTS pdf_original_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS pdf_mime_type VARCHAR(120) DEFAULT 'application/pdf',
+  ADD COLUMN IF NOT EXISTS pdf_size INT;

@@ -90,10 +90,7 @@ async function downloadPdf(req, res, next) {
           ipAddress: req.ip,
           userAgent: req.get('user-agent')
         });
-    if (delivery.type === 'redirect') {
-      return res.redirect(delivery.value);
-    }
-    return res.download(delivery.value);
+    return sendPdfDelivery(res, delivery);
   } catch (err) {
     next(err);
   }
@@ -102,13 +99,27 @@ async function downloadPdf(req, res, next) {
 async function downloadAdminPdf(req, res, next) {
   try {
     const delivery = await testService.getAdminPdf(Number(req.params.id));
-    if (delivery.type === 'redirect') {
-      return res.redirect(delivery.value);
-    }
-    return res.download(delivery.value);
+    return sendPdfDelivery(res, delivery);
   } catch (err) {
     next(err);
   }
+}
+
+function sendPdfDelivery(res, delivery) {
+  if (delivery.type === 'redirect') {
+    return res.redirect(delivery.value);
+  }
+  if (delivery.type === 'buffer') {
+    res.setHeader('Content-Type', delivery.contentType || 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${safeDownloadName(delivery.filename)}"`);
+    res.setHeader('Content-Length', delivery.value.length);
+    return res.send(delivery.value);
+  }
+  return res.download(delivery.value);
+}
+
+function safeDownloadName(name) {
+  return String(name || 'question-paper.pdf').replace(/["\r\n]/g, '_');
 }
 
 module.exports = {

@@ -7,10 +7,18 @@ async function createTest({ title, branchId, semester, scheduledStart, scheduled
   if (!file) throw new ApiError(422, 'PDF file is required');
 
   const saved = await storageService.savePdf(file);
+  const pdfBytes = await storageService.getUploadedFileBytes(file);
   const rows = await query(
-    `INSERT INTO tests (title, branch_id, semester, pdf_path, scheduled_start, scheduled_end, time_limit_minutes, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [title, branchId, semester, saved.path, scheduledStart, scheduledEnd, timeLimitMinutes, createdBy]
+    `INSERT INTO tests (
+       title, branch_id, semester, pdf_path, pdf_data, pdf_original_name, pdf_mime_type, pdf_size,
+       scheduled_start, scheduled_end, time_limit_minutes, created_by
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+    [
+      title, branchId, semester, saved.path, pdfBytes, file.originalname,
+      file.mimetype || 'application/pdf', pdfBytes.length,
+      scheduledStart, scheduledEnd, timeLimitMinutes, createdBy
+    ]
   );
 
   return getTestById(rows[0].id);
@@ -28,7 +36,7 @@ async function getTestById(id) {
 
 async function listAdminTests() {
   return query(
-    `SELECT t.id, t.title, t.pdf_path, t.semester, t.scheduled_start, t.scheduled_end,
+    `SELECT t.id, t.title, t.pdf_path, t.pdf_original_name, t.pdf_size, t.semester, t.scheduled_start, t.scheduled_end,
             t.time_limit_minutes, t.is_active, b.name AS branch_name, b.code AS branch_code
      FROM tests t JOIN branches b ON b.id = t.branch_id
      ORDER BY t.scheduled_start DESC`
@@ -37,12 +45,13 @@ async function listAdminTests() {
 
 async function listStudentTests(user) {
   const tests = await query(
-    `SELECT t.id, t.title, t.pdf_path, t.semester, t.scheduled_start, t.scheduled_end,
+    `SELECT t.id, t.title, t.pdf_path, t.pdf_original_name, t.pdf_size, t.semester, t.scheduled_start, t.scheduled_end,
             t.time_limit_minutes, a.id AS attempt_id, a.status AS attempt_status,
-            a.blocked_reason, a.blocked_at, a.allowed_at, a.completed_at
+            a.blocked_reason, a.blocked_at, a.allowed_at, a.started_at, a.last_seen_at, a.completed_at
      FROM tests t
      LEFT JOIN test_attempts a ON a.test_id = t.id AND a.student_id = $1
-     WHERE t.branch_id = $2 AND t.semester = $3 AND t.is_active = true
+     WHERE t.branch_id = $2 AND t.semester = $3
+       AND (t.is_active = true OR t.scheduled_end < CURRENT_TIMESTAMP)
      ORDER BY t.scheduled_start DESC`,
     [user.sub, user.branchId, user.semester]
   );
@@ -84,9 +93,13 @@ async function replacePdf(id, file) {
   if (!file) throw new ApiError(422, 'PDF file is required');
   const existing = await getTestById(id);
   const saved = await storageService.savePdf(file);
+  const pdfBytes = await storageService.getUploadedFileBytes(file);
   await query(
-    `UPDATE tests SET pdf_path = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-    [saved.path, id]
+    `UPDATE tests
+     SET pdf_path = $1, pdf_data = $2, pdf_original_name = $3, pdf_mime_type = $4,
+         pdf_size = $5, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $6`,
+    [saved.path, pdfBytes, file.originalname, file.mimetype || 'application/pdf', pdfBytes.length, id]
   );
   await storageService.deletePdf(existing.pdf_path);
   return getTestById(id);
@@ -113,22 +126,22 @@ async function removeTest(id) {
 
 async function getStudentPdf(testId, user, context = {}) {
   const test = await getTestById(testId);
-  if (!test.is_active) throw new ApiError(403, 'This test is not active');
   if (test.branch_id !== user.branchId) throw new ApiError(403, 'This test is not assigned to your branch');
   if (test.semester !== user.semester) throw new ApiError(403, 'This test is not assigned to your semester');
   const status = statusForTest(test);
+  if (!test.is_active && status !== 'ended') throw new ApiError(403, 'This test is not active');
   if (status === 'ended') {
-    await attemptService.assertCompletedPdfAccess(testId, user, context);
-    return storageService.getPdfDelivery(test.pdf_path);
+    await attemptService.recordEndedPdfAccess(test, user, context);
+    return storageService.getPdfDelivery(test.pdf_path, test);
   }
   if (status !== 'live') throw new ApiError(403, 'PDF is available only during scheduled test time');
   await attemptService.assertLivePdfAccess(testId, user, context);
-  return storageService.getPdfDelivery(test.pdf_path);
+  return storageService.getPdfDelivery(test.pdf_path, test);
 }
 
 async function getAdminPdf(testId) {
   const test = await getTestById(testId);
-  return storageService.getPdfDelivery(test.pdf_path);
+  return storageService.getPdfDelivery(test.pdf_path, test);
 }
 
 function statusForTest(test) {
