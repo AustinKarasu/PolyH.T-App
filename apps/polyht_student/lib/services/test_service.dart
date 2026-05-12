@@ -14,7 +14,9 @@ class TestService {
   Future<void> startAttempt(int testId) => _apiClient.post('/attempts/$testId/start', {});
 
   Future<void> completeAttempt(int testId, {String? answerNote}) {
-    return _apiClient.post('/attempts/$testId/complete', {'answerNote': answerNote});
+    return _apiClient.post('/attempts/$testId/complete', {
+      if (answerNote != null && answerNote.trim().isNotEmpty) 'answerNote': answerNote.trim(),
+    });
   }
 
   Future<String> downloadPdf(int testId) => _apiClient.downloadPdf(testId);

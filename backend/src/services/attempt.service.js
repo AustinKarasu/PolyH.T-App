@@ -2,7 +2,7 @@ const { query } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 
 const criticalEvents = new Set(['app_backgrounded', 'app_detached', 'app_hidden', 'back_blocked', 'split_screen_detected']);
-const warningEvents = new Set(['app_inactive', 'app_resumed']);
+const warningEvents = new Set(['app_inactive', 'app_resumed', 'time_limit_reached']);
 
 async function startAttempt(testId, user, context = {}) {
   const test = await getAssignedLiveTestForUser(testId, user);

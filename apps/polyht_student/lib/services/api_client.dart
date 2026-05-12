@@ -7,6 +7,16 @@ import 'package:path_provider/path_provider.dart';
 import '../config/api_config.dart';
 import 'token_storage.dart';
 
+class ApiException implements Exception {
+  ApiException(this.message, {required this.statusCode});
+
+  final String message;
+  final int statusCode;
+
+  @override
+  String toString() => message;
+}
+
 class ApiClient {
   ApiClient({TokenStorage? tokenStorage}) : _tokenStorage = tokenStorage ?? TokenStorage();
 
@@ -103,7 +113,7 @@ class ApiClient {
   dynamic _decode(http.Response response) {
     final body = _decodeBody(response);
     if (response.statusCode >= 400) {
-      throw Exception(_messageFromBody(body));
+      throw ApiException(_messageFromBody(body), statusCode: response.statusCode);
     }
     return body;
   }
@@ -134,6 +144,6 @@ class ApiClient {
     if (contentType.toLowerCase().contains('application/pdf') || hasPdfHeader) return;
 
     final body = _decodeBody(response);
-    throw Exception(_messageFromBody(body));
+    throw ApiException(_messageFromBody(body), statusCode: response.statusCode);
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../config/app_theme.dart';
 import '../models/student_test.dart';
+import '../services/api_client.dart';
 import '../services/exam_security_service.dart';
 import '../services/test_service.dart';
 
@@ -27,12 +28,14 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   bool _loading = true;
   bool _hasFocusWarning = false;
   bool _locked = false;
+  String? _errorMessage;
   int _currentPage = 0;
   int _totalPages = 0;
   late DateTime _startedAt;
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _completedByTimer = false;
+  bool _leavingExam = false;
 
   @override
   void initState() {
@@ -82,7 +85,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (widget.reviewOnly) return;
+    if (widget.reviewOnly || _leavingExam) return;
     if (state == AppLifecycleState.inactive) {
       setState(() => _hasFocusWarning = true);
       unawaited(_logEvent('app_inactive'));
@@ -278,7 +281,16 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                           ),
                         )
                       : _pdfPath == null
-                          ? const Center(child: Text('Unable to open PDF.'))
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  _errorMessage ?? 'Unable to open PDF.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.65)),
+                                ),
+                              ),
+                            )
                           : PDFView(
                               filePath: _pdfPath!,
                               enableSwipe: true,
@@ -287,6 +299,14 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                               pageFling: true,
                               onRender: (pages) => setState(() => _totalPages = pages ?? 0),
                               onPageChanged: (page, _) => setState(() => _currentPage = page ?? 0),
+                              onError: (error) => setState(() {
+                                _pdfPath = null;
+                                _errorMessage = 'Unable to display this PDF. Please ask the admin to re-upload it.';
+                              }),
+                              onPageError: (_, error) => setState(() {
+                                _pdfPath = null;
+                                _errorMessage = 'Unable to display this PDF page. Please ask the admin to re-upload it.';
+                              }),
                             ),
             ),
           ],
@@ -310,11 +330,20 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
           _loading = false;
         });
       }
+    } on ApiException catch (error) {
+      if (mounted) {
+        final isLocked = _looksLikeLockedAttempt(error.message);
+        setState(() {
+          _locked = isLocked;
+          _hasFocusWarning = isLocked;
+          _errorMessage = error.message;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _locked = true;
-          _hasFocusWarning = true;
+          _errorMessage = 'Unable to load the question paper. Please check your connection and try again.';
           _loading = false;
         });
       }
@@ -371,6 +400,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
       }
       await _testService.completeAttempt(widget.test.id);
       await _deleteLocalPdf();
+      _leavingExam = true;
       await _securityService.exitExamMode();
       if (mounted) {
         if (autoSubmitted) {
@@ -378,12 +408,13 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
         }
         Navigator.of(context).pop();
       }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } catch (_) {
       if (mounted) {
-        setState(() {
-          _locked = true;
-          _hasFocusWarning = true;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to submit. Please try again.')));
       }
     }
   }
@@ -408,5 +439,10 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     try {
       await File(path).delete();
     } catch (_) {}
+  }
+
+  bool _looksLikeLockedAttempt(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('locked') || lower.contains('blocked') || lower.contains('admin permission');
   }
 }
