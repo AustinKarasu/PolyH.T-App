@@ -73,7 +73,7 @@ class ApiClient {
       headers: await _headers(),
     );
     if (response.statusCode >= 400) {
-      throw Exception('PDF is not available now');
+      _decode(response);
     }
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/polyht_test_$testId.pdf');

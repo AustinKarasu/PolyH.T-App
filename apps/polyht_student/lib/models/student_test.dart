@@ -4,6 +4,7 @@ class StudentTest {
     required this.title,
     required this.scheduledStart,
     required this.scheduledEnd,
+    required this.semester,
     required this.timeLimitMinutes,
     required this.status,
     this.originalFilename,
@@ -15,6 +16,7 @@ class StudentTest {
   final String title;
   final DateTime scheduledStart;
   final DateTime scheduledEnd;
+  final int semester;
   final int timeLimitMinutes;
   final String status;
   final String? originalFilename;
@@ -30,6 +32,7 @@ class StudentTest {
       title: json['title'] as String,
       scheduledStart: DateTime.parse(json['scheduled_start'] as String),
       scheduledEnd: DateTime.parse(json['scheduled_end'] as String),
+      semester: json['semester'] as int? ?? 1,
       timeLimitMinutes: json['time_limit_minutes'] as int,
       status: json['status'] as String,
       originalFilename: json['original_filename'] as String?,

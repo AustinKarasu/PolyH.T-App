@@ -5,7 +5,7 @@ const blockingEvents = new Set(['app_backgrounded', 'app_detached', 'app_hidden'
 const warningEvents = new Set(['app_inactive', 'app_resumed']);
 
 async function startAttempt(testId, user, context = {}) {
-  const test = await getAssignedLiveTest(testId, user.branchId);
+  const test = await getAssignedLiveTestForUser(testId, user);
   const existing = await getAttemptByStudent(testId, user.sub);
 
   if (existing?.status === 'blocked') {
@@ -190,15 +190,15 @@ async function blockAttempt(attemptId, reason) {
   );
 }
 
-async function getAssignedLiveTest(testId, branchId) {
+async function getAssignedLiveTestForUser(testId, user) {
   const rows = await query(
     `SELECT * FROM tests
-     WHERE id = $1 AND branch_id = $2 AND is_active = true
+     WHERE id = $1 AND branch_id = $2 AND semester = $3 AND is_active = true
        AND CURRENT_TIMESTAMP BETWEEN scheduled_start AND scheduled_end
      LIMIT 1`,
-    [testId, branchId]
+    [testId, user.branchId, user.semester]
   );
-  if (!rows[0]) throw new ApiError(403, 'This paper is not available for your branch at this time.');
+  if (!rows[0]) throw new ApiError(403, 'This paper is not available for your branch and semester at this time.');
   return rows[0];
 }
 

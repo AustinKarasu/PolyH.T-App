@@ -3,6 +3,7 @@ class TestPaper {
     required this.id,
     required this.title,
     required this.branchName,
+    required this.semester,
     required this.scheduledStart,
     required this.scheduledEnd,
     required this.timeLimitMinutes,
@@ -13,6 +14,7 @@ class TestPaper {
   final int id;
   final String title;
   final String branchName;
+  final int semester;
   final DateTime scheduledStart;
   final DateTime scheduledEnd;
   final int timeLimitMinutes;
@@ -24,6 +26,7 @@ class TestPaper {
       id: json['id'] as int,
       title: json['title'] as String,
       branchName: json['branch_name'] as String,
+      semester: json['semester'] as int? ?? 1,
       scheduledStart: DateTime.parse(json['scheduled_start'] as String),
       scheduledEnd: DateTime.parse(json['scheduled_end'] as String),
       timeLimitMinutes: json['time_limit_minutes'] as int,

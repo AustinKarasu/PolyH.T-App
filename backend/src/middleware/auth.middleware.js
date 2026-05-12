@@ -14,15 +14,21 @@ async function authenticate(req, _res, next) {
   try {
     const payload = jwt.verify(token, env.jwtSecret);
     const sessions = await query(
-      `SELECT id FROM auth_sessions
-       WHERE token_jti = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+      `SELECT s.id, u.branch_id, u.semester
+       FROM auth_sessions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.token_jti = $1 AND s.revoked_at IS NULL AND s.expires_at > CURRENT_TIMESTAMP
        LIMIT 1`,
       [payload.jti]
     );
     if (!sessions[0]) {
       return next(new ApiError(401, 'Session expired or revoked'));
     }
-    req.user = payload;
+    req.user = {
+      ...payload,
+      branchId: sessions[0].branch_id ?? payload.branchId,
+      semester: sessions[0].semester ?? payload.semester
+    };
     return next();
   } catch (_err) {
     return next(new ApiError(401, 'Invalid or expired token'));

@@ -262,7 +262,7 @@ class _StudentTestCard extends StatelessWidget {
                 Icon(Icons.timer_outlined, size: 14, color: muted),
                 const SizedBox(width: 4),
                 Text(
-                  '${test.timeLimitMinutes} min',
+                  'Sem ${test.semester} - ${test.timeLimitMinutes} min',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: muted),
                 ),
               ],

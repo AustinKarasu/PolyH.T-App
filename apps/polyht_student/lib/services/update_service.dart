@@ -38,7 +38,7 @@ class UpdateService {
   Future<AppUpdate?> checkForUpdate() async {
     final packageInfo = await PackageInfo.fromPlatform();
     final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
-    final response = await http.get(Uri.parse(UpdateConfig.manifestUrl));
+    final response = await http.get(Uri.parse(UpdateConfig.manifestUrl)).timeout(const Duration(seconds: 2));
     if (response.statusCode >= 400) {
       throw Exception('Unable to check for updates');
     }

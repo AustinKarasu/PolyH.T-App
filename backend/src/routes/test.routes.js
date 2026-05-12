@@ -6,15 +6,16 @@ const { pdfUpload } = require('../middleware/upload.middleware');
 const { validate } = require('../middleware/validate.middleware');
 
 const testValidation = [
-  body('title').trim().isLength({ min: 3, max: 120 }),
+  body('title').trim().isLength({ min: 3, max: 200 }).withMessage('Title must be 3 to 200 characters'),
   body('branchId').isInt({ min: 1 }),
+  body('semester').isInt({ min: 1, max: 6 }),
   body('scheduledStart').isISO8601(),
   body('scheduledEnd').isISO8601(),
   body('timeLimitMinutes').isInt({ min: 1, max: 360 })
 ];
 
 router.get('/', authenticate, testController.listTests);
-router.get('/:id/pdf', authenticate, requireRole('student'), testController.downloadPdf);
+router.get('/:id/pdf', authenticate, testController.downloadPdf);
 
 router.post(
   '/',

@@ -14,7 +14,6 @@ class UpdateGate extends StatefulWidget {
 class _UpdateGateState extends State<UpdateGate> {
   final _service = UpdateService();
   AppUpdate? _mandatoryUpdate;
-  bool _checking = true;
 
   @override
   void initState() {
@@ -28,20 +27,16 @@ class _UpdateGateState extends State<UpdateGate> {
       if (mounted) {
         setState(() {
           _mandatoryUpdate = update?.mandatory == true ? update : null;
-          _checking = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _checking = false);
+      // Update checks should never block opening the app.
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final update = _mandatoryUpdate;
-    if (_checking) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
     if (update == null) return widget.child;
 
     return PopScope(

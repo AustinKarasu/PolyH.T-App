@@ -610,7 +610,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
     final semester = int.tryParse(text);
-    return semester != null && semester >= 1 && semester <= 8 ? null : 'Enter 1 to 8';
+    return semester != null && semester >= 1 && semester <= 6 ? null : 'Enter 1 to 6';
   }
 
   String? _optionalAdmissionYear(String? value) {

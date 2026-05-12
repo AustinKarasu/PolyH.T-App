@@ -20,6 +20,7 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
 
   List<Branch> _branches = [];
   Branch? _selectedBranch;
+  int _selectedSemester = 1;
   DateTime? _start;
   DateTime? _end;
   String? _pdfPath;
@@ -116,6 +117,19 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
                 }).toList(),
                 onChanged: (branch) => setState(() => _selectedBranch = branch),
                 validator: (value) => value == null ? 'Choose a branch' : null,
+              ),
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<int>(
+                value: _selectedSemester,
+                decoration: const InputDecoration(
+                  labelText: 'Semester',
+                  prefixIcon: Icon(Icons.school_outlined),
+                ),
+                items: List.generate(6, (index) => index + 1)
+                    .map((semester) => DropdownMenuItem(value: semester, child: Text('Semester $semester')))
+                    .toList(),
+                onChanged: (semester) => setState(() => _selectedSemester = semester ?? 1),
               ),
               const SizedBox(height: 16),
 
@@ -241,6 +255,7 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
       await _service.uploadTest(
         title: _titleController.text.trim(),
         branchId: _selectedBranch!.id,
+        semester: _selectedSemester,
         scheduledStart: _start!,
         scheduledEnd: _end!,
         timeLimitMinutes: int.parse(_timeLimitController.text),

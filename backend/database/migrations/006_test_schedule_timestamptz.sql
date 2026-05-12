@@ -1,0 +1,3 @@
+ALTER TABLE tests
+  ALTER COLUMN scheduled_start TYPE TIMESTAMPTZ USING scheduled_start AT TIME ZONE 'UTC',
+  ALTER COLUMN scheduled_end TYPE TIMESTAMPTZ USING scheduled_end AT TIME ZONE 'UTC';

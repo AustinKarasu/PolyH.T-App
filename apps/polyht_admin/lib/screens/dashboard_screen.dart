@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../services/test_service.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/update_button.dart';
+import 'admin_pdf_viewer_screen.dart';
 import 'upload_test_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -207,7 +208,7 @@ class _TestCard extends StatelessWidget {
                     children: [
                       Text(test.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 2),
-                      Text('${test.branchName} - ${test.timeLimitMinutes} min', style: TextStyle(fontSize: 12, color: muted)),
+                      Text('${test.branchName} - Sem ${test.semester} - ${test.timeLimitMinutes} min', style: TextStyle(fontSize: 12, color: muted)),
                     ],
                   ),
                 ),
@@ -268,12 +269,26 @@ class _TestCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
+                    onPressed: () => _viewPdf(context),
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    label: const Text('View PDF'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
                     onPressed: () => _replacePdf(context),
                     icon: const Icon(Icons.swap_horiz_rounded, size: 18),
                     label: const Text('Re-upload'),
                   ),
                 ),
-                const SizedBox(width: 10),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _delete(context),
@@ -305,6 +320,20 @@ class _TestCard extends StatelessWidget {
       pdfName: file.name,
     );
     onChanged();
+  }
+
+  Future<void> _viewPdf(BuildContext context) async {
+    try {
+      final path = await TestService().downloadPdf(test.id);
+      if (!context.mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => AdminPdfViewerScreen(title: test.title, filePath: path)),
+      );
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+      }
+    }
   }
 
   Future<void> _toggleActive(BuildContext context) async {

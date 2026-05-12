@@ -1,0 +1,8 @@
+ALTER TABLE tests
+  ADD COLUMN IF NOT EXISTS semester SMALLINT NOT NULL DEFAULT 1;
+
+ALTER TABLE tests
+  DROP CONSTRAINT IF EXISTS tests_semester_check;
+
+ALTER TABLE tests
+  ADD CONSTRAINT tests_semester_check CHECK (semester BETWEEN 1 AND 6);

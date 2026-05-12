@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../config/api_config.dart';
 import 'token_storage.dart';
@@ -65,6 +67,7 @@ class ApiClient {
   Future<dynamic> uploadTest({
     required String title,
     required int branchId,
+    required int semester,
     required DateTime scheduledStart,
     required DateTime scheduledEnd,
     required int timeLimitMinutes,
@@ -77,8 +80,9 @@ class ApiClient {
     request.fields.addAll({
       'title': title,
       'branchId': '$branchId',
-      'scheduledStart': scheduledStart.toIso8601String(),
-      'scheduledEnd': scheduledEnd.toIso8601String(),
+      'semester': '$semester',
+      'scheduledStart': scheduledStart.toUtc().toIso8601String(),
+      'scheduledEnd': scheduledEnd.toUtc().toIso8601String(),
       'timeLimitMinutes': '$timeLimitMinutes',
     });
     request.files.add(await _multipartFile('pdf', path: pdfPath, bytes: pdfBytes, filename: pdfName));
@@ -101,6 +105,20 @@ class ApiClient {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     return _decode(response);
+  }
+
+  Future<String> downloadPdf(int testId) async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/tests/$testId/pdf'),
+      headers: await _headers(),
+    );
+    if (response.statusCode >= 400) {
+      _decode(response);
+    }
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/polyht_admin_test_$testId.pdf');
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+    return file.path;
   }
 
   Future<dynamic> uploadPhoto({

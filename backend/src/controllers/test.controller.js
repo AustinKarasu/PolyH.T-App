@@ -5,6 +5,7 @@ async function createTest(req, res, next) {
     const test = await testService.createTest({
       title: req.body.title,
       branchId: Number(req.body.branchId),
+      semester: Number(req.body.semester),
       scheduledStart: req.body.scheduledStart,
       scheduledEnd: req.body.scheduledEnd,
       timeLimitMinutes: Number(req.body.timeLimitMinutes),
@@ -33,6 +34,7 @@ async function updateTest(req, res, next) {
     const test = await testService.updateTest(Number(req.params.id), {
       title: req.body.title,
       branchId: Number(req.body.branchId),
+      semester: Number(req.body.semester),
       scheduledStart: req.body.scheduledStart,
       scheduledEnd: req.body.scheduledEnd,
       timeLimitMinutes: Number(req.body.timeLimitMinutes),
@@ -82,10 +84,12 @@ async function removeTest(req, res, next) {
 
 async function downloadPdf(req, res, next) {
   try {
-    const delivery = await testService.getStudentPdf(Number(req.params.id), req.user, {
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
+    const delivery = req.user.role === 'admin'
+      ? await testService.getAdminPdf(Number(req.params.id))
+      : await testService.getStudentPdf(Number(req.params.id), req.user, {
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
     if (delivery.type === 'redirect') {
       return res.redirect(delivery.value);
     }

@@ -14,9 +14,31 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000
 });
 
+let runtimeSchemaReady;
+
+async function ensureRuntimeSchema() {
+  if (!runtimeSchemaReady) {
+    runtimeSchemaReady = pool.query(`
+      ALTER TABLE tests
+        ADD COLUMN IF NOT EXISTS semester SMALLINT NOT NULL DEFAULT 1;
+      ALTER TABLE tests
+        DROP CONSTRAINT IF EXISTS tests_semester_check;
+      ALTER TABLE tests
+        ADD CONSTRAINT tests_semester_check CHECK (semester BETWEEN 1 AND 6);
+    `).catch((err) => {
+      runtimeSchemaReady = null;
+      throw err;
+    });
+  }
+  return runtimeSchemaReady;
+}
+
 // Helper: execute a parameterized query
 // Usage: db.query('SELECT * FROM users WHERE id = $1', [userId])
 async function query(text, params = []) {
+  if (!/^\s*ALTER\s+TABLE\s+tests/i.test(text)) {
+    await ensureRuntimeSchema();
+  }
   const res = await pool.query(text, params);
   return res.rows;
 }

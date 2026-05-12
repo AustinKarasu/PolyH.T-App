@@ -22,6 +22,7 @@ class TestService {
   Future<void> uploadTest({
     required String title,
     required int branchId,
+    required int semester,
     required DateTime scheduledStart,
     required DateTime scheduledEnd,
     required int timeLimitMinutes,
@@ -32,6 +33,7 @@ class TestService {
     await _apiClient.uploadTest(
       title: title,
       branchId: branchId,
+      semester: semester,
       scheduledStart: scheduledStart,
       scheduledEnd: scheduledEnd,
       timeLimitMinutes: timeLimitMinutes,
@@ -77,4 +79,6 @@ class TestService {
   Future<void> allowAttempt(int attemptId) async {
     await _apiClient.postEmpty('/attempts/admin/$attemptId/allow');
   }
+
+  Future<String> downloadPdf(int testId) => _apiClient.downloadPdf(testId);
 }

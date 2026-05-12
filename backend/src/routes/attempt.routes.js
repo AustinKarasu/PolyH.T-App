@@ -23,7 +23,8 @@ router.post(
       'app_backgrounded',
       'app_resumed',
       'app_detached',
-      'back_blocked'
+      'back_blocked',
+      'split_screen_detected'
     ]),
     body('metadata').optional().isObject()
   ],

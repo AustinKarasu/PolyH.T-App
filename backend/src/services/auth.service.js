@@ -39,7 +39,7 @@ async function login(identifier, password, context = {}) {
 
   const jti = crypto.randomUUID();
   const token = jwt.sign(
-    { sub: user.id, role: user.role, branchId: user.branch_id, jti },
+    { sub: user.id, role: user.role, branchId: user.branch_id, semester: user.semester, jti },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn }
   );
