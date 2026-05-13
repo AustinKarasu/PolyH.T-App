@@ -6,8 +6,6 @@ const { imageUpload } = require('../middleware/upload.middleware');
 const { authLimiter } = require('../middleware/security.middleware');
 const { validate } = require('../middleware/validate.middleware');
 
-router.get('/captcha', authController.captchaPage);
-
 router.post(
   '/login',
   authLimiter,
@@ -15,7 +13,6 @@ router.post(
     body('identifier').trim().notEmpty(),
     body('password').isLength({ min: 6 }),
     body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
-    body('recaptchaToken').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 10, max: 4096 }),
     body('deviceLabel').optional().trim().isLength({ max: 160 })
   ],
   validate,

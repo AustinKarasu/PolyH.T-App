@@ -31,7 +31,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String identifier, String password, {String? totpCode, String? recaptchaToken}) async {
+  Future<void> login(String identifier, String password, {String? totpCode}) async {
     isLoading = true;
     error = null;
     if (totpCode != null && totpCode.trim().isNotEmpty) {
@@ -39,7 +39,7 @@ class AuthProvider extends ChangeNotifier {
     }
     notifyListeners();
     try {
-      user = await _authService.login(identifier, password, totpCode: totpCode, recaptchaToken: recaptchaToken);
+      user = await _authService.login(identifier, password, totpCode: totpCode);
       requiresTwoFactor = false;
     } on TwoFactorRequiredException catch (err) {
       requiresTwoFactor = true;

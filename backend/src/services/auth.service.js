@@ -5,12 +5,8 @@ const { query } = require('../config/db');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
 const storageService = require('./storage.service');
-const recaptchaService = require('./recaptcha.service');
 
 async function login(identifier, password, context = {}) {
-  if (!context.totpCode) {
-    await recaptchaService.verifyRecaptcha(context.recaptchaToken, context.ipAddress);
-  }
   await assertLoginAllowed(identifier, context.ipAddress);
 
   const rows = await query(

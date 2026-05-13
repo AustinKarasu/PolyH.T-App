@@ -5,7 +5,6 @@ async function login(req, res, next) {
     const result = await authService.login(req.body.identifier, req.body.password, {
       deviceLabel: req.body.deviceLabel,
       totpCode: req.body.totpCode,
-      recaptchaToken: req.body.recaptchaToken,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
@@ -22,34 +21,6 @@ async function me(req, res, next) {
   } catch (err) {
     next(err);
   }
-}
-
-async function captchaPage(_req, res) {
-  const { env } = require('../config/env');
-  res.type('html').send(`<!doctype html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;background:#f8f5ff;color:#1f1235}
-    .box{text-align:center;padding:24px}.title{font-size:20px;font-weight:700;margin-bottom:8px}.sub{font-size:14px;margin-bottom:20px;color:#675c75}
-  </style>
-</head>
-<body>
-  <div class="box">
-    <div class="title">Verify CAPTCHA</div>
-    <div class="sub">Complete this check to continue signing in.</div>
-    <div class="g-recaptcha" data-sitekey="${env.recaptchaSiteKey}" data-callback="onCaptcha"></div>
-  </div>
-  <script>
-    function onCaptcha(token){
-      if (window.Captcha && window.Captcha.postMessage) window.Captcha.postMessage(token);
-      document.title = 'captcha:' + token;
-    }
-  </script>
-</body>
-</html>`);
 }
 
 async function updateMe(req, res, next) {
@@ -121,7 +92,6 @@ async function logout(req, res, next) {
 
 module.exports = {
   login,
-  captchaPage,
   me,
   updateMe,
   updateMyPhoto,
