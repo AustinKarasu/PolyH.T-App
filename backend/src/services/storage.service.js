@@ -109,11 +109,20 @@ async function getPdfDelivery(filePathOrKey, test = null) {
     );
     return { type: 'redirect', value: url };
   }
+  if (!filePathOrKey) {
+    throw new ApiError(404, 'Question paper PDF is not available. Re-upload this test PDF from the admin app.');
+  }
+  const value = path.isAbsolute(filePathOrKey)
+    ? filePathOrKey
+    : path.resolve(env.uploadDir, path.basename(filePathOrKey));
+  try {
+    await fs.access(value);
+  } catch (_) {
+    throw new ApiError(404, 'Question paper PDF is not available. Re-upload this test PDF from the admin app.');
+  }
   return {
     type: 'file',
-    value: path.isAbsolute(filePathOrKey)
-      ? filePathOrKey
-      : path.resolve(env.uploadDir, path.basename(filePathOrKey))
+    value
   };
 }
 

@@ -30,7 +30,7 @@ class _TestListScreenState extends State<TestListScreen> {
 
   Future<List<StudentTest>> _loadTests() async {
     final tests = await _service.fetchTests();
-    await NotificationService.instance.scheduleTests(tests);
+    NotificationService.instance.scheduleTests(tests).ignore();
     return tests;
   }
 
