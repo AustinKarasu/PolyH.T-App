@@ -55,7 +55,12 @@ jobs:
           MANDATORY="${{ github.event.inputs.mandatory }}"
           RELEASE_NOTES="${{ github.event.inputs.releaseNotes }}"
           if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
-          if [ -z "$BUILD_NUMBER" ]; then BUILD_NUMBER="$(jq -r '.latestBuild // empty' website/releases/polyht_student_latest.json)"; fi
+          if [ -z "$BUILD_NUMBER" ]; then
+            PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_student_latest.json)"
+            if [ -n "$PREVIOUS_BUILD" ] && [ "$PREVIOUS_BUILD" != "null" ]; then
+              BUILD_NUMBER=$((PREVIOUS_BUILD + 1))
+            fi
+          fi
           if [ -z "$BUILD_NUMBER" ]; then BUILD_NUMBER="${GITHUB_RUN_NUMBER}"; fi
           if [ -z "$MANDATORY" ]; then MANDATORY="true"; fi
           if [ -z "$RELEASE_NOTES" ]; then RELEASE_NOTES="$(jq -r '.releaseNotes // empty' website/releases/polyht_student_latest.json)"; fi

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/update_config.dart';
 
@@ -43,11 +44,12 @@ class UpdateService {
       throw Exception('Unable to check for updates');
     }
     final update = AppUpdate.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-    return update.latestBuild > currentBuild ? update : null;
+    return update.latestBuild > currentBuild || _isNewerVersion(update.latestVersion, packageInfo.version) ? update : null;
   }
 
   Future<void> openDownload(AppUpdate update) async {
-    final response = await http.get(Uri.parse(update.downloadUrl));
+    final uri = Uri.parse(update.downloadUrl);
+    final response = await http.get(uri);
     if (response.statusCode >= 400 || response.bodyBytes.isEmpty) {
       throw Exception('Unable to download APK update');
     }
@@ -56,7 +58,22 @@ class UpdateService {
     await file.writeAsBytes(response.bodyBytes, flush: true);
     final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
     if (result.type != ResultType.done) {
-      throw Exception(result.message);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+      throw Exception('Unable to open APK installer: ${result.message}');
     }
+  }
+
+  bool _isNewerVersion(String latest, String current) {
+    final latestParts = latest.split('.').map((item) => int.tryParse(item) ?? 0).toList();
+    final currentParts = current.split('.').map((item) => int.tryParse(item) ?? 0).toList();
+    for (var i = 0; i < 3; i++) {
+      final l = i < latestParts.length ? latestParts[i] : 0;
+      final c = i < currentParts.length ? currentParts[i] : 0;
+      if (l != c) return l > c;
+    }
+    return false;
   }
 }

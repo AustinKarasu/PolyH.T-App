@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -18,6 +19,7 @@ class NotificationService {
     if (_ready) return;
     try {
       tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
       const ios = DarwinInitializationSettings(
         requestAlertPermission: true,
@@ -39,10 +41,20 @@ class NotificationService {
   Future<void> scheduleTests(List<StudentTest> tests) async {
     await init();
     if (!_ready) return;
+    final prefs = await SharedPreferences.getInstance();
+    final seen = prefs.getStringList('notified_test_ids')?.toSet() ?? <String>{};
     for (final test in tests) {
       try {
         await _cancelTest(test.id);
         if (test.status == 'ended') continue;
+        if (test.status == 'upcoming' && !seen.contains('${test.id}')) {
+          await _showNow(
+            id: _id(test.id, 4),
+            title: 'House test scheduled',
+            body: '${test.title} is scheduled for ${_time(test.scheduledStart)}.',
+          );
+          seen.add('${test.id}');
+        }
         await _schedule(
           id: _id(test.id, 1),
           when: _upcomingTime(test.scheduledStart),
@@ -63,6 +75,7 @@ class NotificationService {
         );
       } catch (_) {}
     }
+    await prefs.setStringList('notified_test_ids', seen.toList());
   }
 
   Future<void> _cancelTest(int testId) async {
@@ -98,6 +111,28 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  Future<void> _showNow({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await _plugin.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'house_tests',
+          'House tests',
+          channelDescription: 'Upcoming, started, and ended house test alerts',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
     );
   }
 
