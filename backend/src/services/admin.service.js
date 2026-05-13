@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
-const { query } = require('../config/db');
+const { query, transaction } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
+const authService = require('./auth.service');
 
 async function listAdmins() {
   return query(
@@ -59,4 +60,31 @@ async function deleteAdmin(adminId, actingAdminId) {
   await query('DELETE FROM users WHERE id = $1 AND role = $2', [adminId, 'admin']);
 }
 
-module.exports = { listAdmins, createAdmin, setAdminActive, setPrimaryAdmin, deleteAdmin };
+async function clearData(actingAdminId, { totpCode, tests = false, history = false, students = false, sessions = false }) {
+  await authService.requireVerifiedTwoFactor(actingAdminId, totpCode);
+  if (!tests && !history && !students && !sessions) {
+    throw new ApiError(422, 'Select at least one data type to clear');
+  }
+
+  await transaction(async (tx) => {
+    if (students) {
+      await tx('DELETE FROM auth_sessions WHERE user_id IN (SELECT id FROM users WHERE role = $1)', ['student']);
+      await tx('DELETE FROM exam_events WHERE student_id IN (SELECT id FROM users WHERE role = $1)', ['student']);
+      await tx('DELETE FROM test_attempts WHERE student_id IN (SELECT id FROM users WHERE role = $1)', ['student']);
+      await tx('DELETE FROM users WHERE role = $1', ['student']);
+    }
+    if (tests) {
+      await tx('DELETE FROM exam_events', []);
+      await tx('DELETE FROM test_attempts', []);
+      await tx('DELETE FROM tests', []);
+    } else if (history) {
+      await tx('DELETE FROM exam_events', []);
+      await tx('DELETE FROM test_attempts', []);
+    }
+    if (sessions) {
+      await tx('UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE revoked_at IS NULL', []);
+    }
+  });
+}
+
+module.exports = { listAdmins, createAdmin, setAdminActive, setPrimaryAdmin, deleteAdmin, clearData };

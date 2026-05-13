@@ -179,6 +179,9 @@ class ApiClient {
       if (lower.startsWith('<!doctype') || lower.startsWith('<html')) {
         return 'Server returned an HTML error page. Please update the app and try again.';
       }
+      if (lower.startsWith('forbidden') || lower.contains('bom1::') || lower.contains('sfo1::') || lower.contains('iad1::')) {
+        return 'Upload was blocked before it reached the app server. Use a PDF under 4 MB or re-export/compress the PDF, then try again.';
+      }
       return text.length > 240 ? '${text.substring(0, 240)}...' : text;
     }
     return 'Request failed';

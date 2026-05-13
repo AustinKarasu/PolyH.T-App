@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
+import 'captcha_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   late Animation<Offset> _slideUp;
   bool _obscurePassword = true;
   bool _showTotp = false;
+  String? _captchaToken;
 
   @override
   void initState() {
@@ -182,6 +184,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   validator: (value) => showTotp && (value == null || value.trim().length < 6) ? 'Enter your authenticator code' : null,
                                 ),
                               ],
+                              const SizedBox(height: 16),
+                              OutlinedButton.icon(
+                                onPressed: auth.isLoading ? null : _verifyCaptcha,
+                                icon: Icon(_captchaToken == null ? Icons.verified_user_outlined : Icons.check_circle_rounded),
+                                label: Text(_captchaToken == null ? 'Verify CAPTCHA' : 'CAPTCHA verified'),
+                              ),
                               const SizedBox(height: 8),
                               if (auth.error != null) ...[
                                 const SizedBox(height: 8),
@@ -246,17 +254,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_captchaToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete CAPTCHA before signing in.')));
+      return;
+    }
     final auth = context.read<AuthProvider>();
     await auth.login(
       _collegeIdController.text.trim(),
       _passwordController.text,
       totpCode: _totpController.text.trim(),
+      recaptchaToken: _captchaToken,
     );
     if (mounted && auth.requiresTwoFactor) {
       setState(() {
         _showTotp = true;
         _totpController.clear();
       });
+    }
+  }
+
+  Future<void> _verifyCaptcha() async {
+    final token = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const CaptchaScreen()));
+    if (token != null && token.isNotEmpty && mounted) {
+      setState(() => _captchaToken = token);
     }
   }
 }

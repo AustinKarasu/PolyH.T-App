@@ -49,4 +49,13 @@ async function deleteAdmin(req, res, next) {
   }
 }
 
-module.exports = { listAdmins, createAdmin, setAdminActive, setPrimaryAdmin, deleteAdmin };
+async function clearData(req, res, next) {
+  try {
+    await adminService.clearData(req.user.sub, req.body);
+    res.json({ status: 'cleared' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listAdmins, createAdmin, setAdminActive, setPrimaryAdmin, deleteAdmin, clearData };

@@ -6,6 +6,8 @@ const { imageUpload } = require('../middleware/upload.middleware');
 const { authLimiter } = require('../middleware/security.middleware');
 const { validate } = require('../middleware/validate.middleware');
 
+router.get('/captcha', authController.captchaPage);
+
 router.post(
   '/login',
   authLimiter,

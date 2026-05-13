@@ -344,6 +344,12 @@ class _TestCardState extends State<_TestCard> {
     );
     final file = result?.files.single;
     if (file == null || (file.path == null && file.bytes == null)) return;
+    if (file.size > 4 * 1024 * 1024) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF is too large for mobile upload. Use a PDF under 4 MB.')),
+      );
+      return;
+    }
     await _runAction(
       () => TestService().replacePdf(
         testId: test.id,

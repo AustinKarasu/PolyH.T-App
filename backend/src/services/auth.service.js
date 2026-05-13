@@ -8,7 +8,9 @@ const storageService = require('./storage.service');
 const recaptchaService = require('./recaptcha.service');
 
 async function login(identifier, password, context = {}) {
-  await recaptchaService.verifyRecaptcha(context.recaptchaToken, context.ipAddress);
+  if (!context.totpCode) {
+    await recaptchaService.verifyRecaptcha(context.recaptchaToken, context.ipAddress);
+  }
   await assertLoginAllowed(identifier, context.ipAddress);
 
   const rows = await query(
@@ -167,6 +169,21 @@ async function disableTwoFactor(userId, code) {
   return getCurrentUser(userId);
 }
 
+async function requireVerifiedTwoFactor(userId, code) {
+  const rows = await query(
+    'SELECT two_factor_enabled, two_factor_secret FROM users WHERE id = $1 AND role = $2 AND is_active = true LIMIT 1',
+    [userId, 'admin']
+  );
+  const user = rows[0];
+  if (!user) throw new ApiError(401, 'Admin account is inactive or no longer exists');
+  if (!user.two_factor_enabled || !user.two_factor_secret) {
+    throw new ApiError(403, 'Enable 2FA before using this action');
+  }
+  if (!verifyTotp(code, user.two_factor_secret)) {
+    throw new ApiError(422, 'Invalid authenticator code');
+  }
+}
+
 async function logout(user) {
   if (!user?.jti) return;
   await query(
@@ -241,6 +258,7 @@ module.exports = {
   setupTwoFactor,
   enableTwoFactor,
   disableTwoFactor,
+  requireVerifiedTwoFactor,
   logout
 };
 

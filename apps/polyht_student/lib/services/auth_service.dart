@@ -19,11 +19,12 @@ class AuthService {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
 
-  Future<AppUser> login(String identifier, String password, {String? totpCode}) async {
+  Future<AppUser> login(String identifier, String password, {String? totpCode, String? recaptchaToken}) async {
     final data = await _apiClient.post('/auth/login', {
       'identifier': identifier,
       'password': password,
       if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode,
+      if (recaptchaToken != null && recaptchaToken.isNotEmpty) 'recaptchaToken': recaptchaToken,
     });
     if (data['requiresTwoFactor'] == true) {
       throw TwoFactorRequiredException(data['message']?.toString() ?? 'Enter your authenticator code to continue.');

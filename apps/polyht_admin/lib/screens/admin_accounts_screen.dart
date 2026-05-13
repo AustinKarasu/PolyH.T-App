@@ -38,6 +38,11 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
             icon: const Icon(Icons.verified_user_outlined),
             onPressed: _manageMy2fa,
           ),
+          IconButton(
+            tooltip: 'Clear data',
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: _showClearDataDialog,
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -162,6 +167,96 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
     nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
+  }
+
+  Future<void> _showClearDataDialog() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.user?.twoFactorEnabled != true) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enable 2FA before clearing data.')));
+      return;
+    }
+    final codeController = TextEditingController();
+    bool tests = false;
+    bool history = false;
+    bool students = false;
+    bool sessions = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Clear app data'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Select exactly what to clear. This action cannot be undone.'),
+                CheckboxListTile(
+                  value: tests,
+                  onChanged: (value) => setDialogState(() => tests = value ?? false),
+                  title: const Text('Tests and PDFs'),
+                  subtitle: const Text('Deletes tests, attempts, and test events.'),
+                ),
+                CheckboxListTile(
+                  value: history,
+                  onChanged: (value) => setDialogState(() => history = value ?? false),
+                  title: const Text('Student test history'),
+                  subtitle: const Text('Deletes attempts and exam logs only.'),
+                ),
+                CheckboxListTile(
+                  value: students,
+                  onChanged: (value) => setDialogState(() => students = value ?? false),
+                  title: const Text('Student accounts'),
+                  subtitle: const Text('Deletes students and their sessions/history.'),
+                ),
+                CheckboxListTile(
+                  value: sessions,
+                  onChanged: (value) => setDialogState(() => sessions = value ?? false),
+                  title: const Text('All login sessions'),
+                  subtitle: const Text('Forces every user to sign in again.'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: codeController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: '2FA code'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Clear selected'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) {
+      codeController.dispose();
+      return;
+    }
+    try {
+      await _service.clearData(
+        totpCode: codeController.text.trim(),
+        tests: tests,
+        history: history,
+        students: students,
+        sessions: sessions,
+      );
+      _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selected data cleared')));
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+      }
+    } finally {
+      codeController.dispose();
+    }
   }
 
   Future<void> _manageMy2fa() async {

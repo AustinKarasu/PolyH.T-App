@@ -34,4 +34,20 @@ class AdminService {
   Future<void> deleteAdmin(int adminId) async {
     await _apiClient.delete('/admins/$adminId');
   }
+
+  Future<void> clearData({
+    required String totpCode,
+    required bool tests,
+    required bool history,
+    required bool students,
+    required bool sessions,
+  }) async {
+    await _apiClient.post('/admins/clear-data', {
+      'totpCode': totpCode,
+      'tests': tests,
+      'history': history,
+      'students': students,
+      'sessions': sessions,
+    });
+  }
 }

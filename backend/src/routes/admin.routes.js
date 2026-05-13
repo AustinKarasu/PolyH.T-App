@@ -31,5 +31,17 @@ router.patch(
 );
 router.patch('/:id/primary', adminController.setPrimaryAdmin);
 router.delete('/:id', adminController.deleteAdmin);
+router.post(
+  '/clear-data',
+  [
+    body('totpCode').trim().isLength({ min: 6, max: 8 }),
+    body('tests').optional().isBoolean(),
+    body('history').optional().isBoolean(),
+    body('students').optional().isBoolean(),
+    body('sessions').optional().isBoolean()
+  ],
+  validate,
+  adminController.clearData
+);
 
 module.exports = router;

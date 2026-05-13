@@ -13,6 +13,7 @@ class UploadTestScreen extends StatefulWidget {
 }
 
 class _UploadTestScreenState extends State<UploadTestScreen> {
+  static const int _maxUploadBytes = 4 * 1024 * 1024;
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _timeLimitController = TextEditingController(text: '60');
@@ -217,6 +218,13 @@ class _UploadTestScreenState extends State<UploadTestScreen> {
     );
     if (result != null) {
       final file = result.files.single;
+      if (file.size > _maxUploadBytes) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF is too large for mobile upload. Use a PDF under 4 MB.')),
+        );
+        return;
+      }
       setState(() {
         _pdfPath = file.path;
         _pdfBytes = file.bytes;
