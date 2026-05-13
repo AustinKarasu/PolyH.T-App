@@ -14,8 +14,8 @@ backend/              Node.js Express API
   database/           SQL schema and migrations
   src/                Controllers, services, middleware, routes
 docs/                 API, database, security, release, deployment docs
-website/              Public APK release manifests and downloads
-.github/workflows/    CI, Vercel deploy, APK release automation
+website/              Public app release manifests and downloads
+.github/workflows/    CI, Vercel deploy, app release automation
 ```
 
 ## Features
@@ -101,8 +101,8 @@ Local defaults are in:
 ## Deployment and Releases
 
 - Backend deployment to Vercel is configured in `.github/workflows/vercel-deploy.yml`.
-- APK release automation is configured in `.github/workflows/release-apk.yml`.
-- The release workflow builds both Android APKs, creates a GitHub Release, attaches both APKs, and publishes update manifests.
+- App release automation is configured in `.github/workflows/release-apk.yml`.
+- The release workflow builds both Android APKs, creates a GitHub Release, attaches APKs plus unsigned iOS `.ipa` artifacts, and publishes update manifests.
 
 ## Important Security Note
 

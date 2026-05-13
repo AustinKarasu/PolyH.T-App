@@ -1,4 +1,4 @@
-# PolyH.T APK Release Flow
+# PolyH.T App Release Flow
 
 ## GitHub Variables
 
@@ -25,12 +25,14 @@ base64 -w 0 release.jks
 ## Build a New Release
 
 1. Open GitHub Actions.
-2. Run `Release APKs`.
+2. Run `Release Apps`.
 3. Enter a new `versionName` and a higher `buildNumber`.
-4. The workflow builds Admin and Student APKs, creates a GitHub Release, and publishes:
+4. The workflow builds Admin and Student Android APKs, creates a GitHub Release, attaches APKs plus unsigned iOS `.ipa` artifacts, and publishes:
    - `/releases/polyht_admin_latest.json`
    - `/releases/polyht_student_latest.json`
    - both APK files
+
+The iOS artifacts are unsigned because Apple requires a macOS signing identity and provisioning profile for device-installable `.ipa` files. Add Apple signing secrets and a signed export step before using the iOS files for normal App Store/TestFlight/device distribution.
 
 ## App Update Button
 

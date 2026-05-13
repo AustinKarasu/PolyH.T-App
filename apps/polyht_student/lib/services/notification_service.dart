@@ -28,9 +28,11 @@ class NotificationService {
       );
       await _plugin.initialize(const InitializationSettings(android: android, iOS: ios));
       if (Platform.isAndroid) {
-        await _plugin
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestNotificationsPermission();
+        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        await androidPlugin?.requestNotificationsPermission();
+        try {
+          await androidPlugin?.requestExactAlarmsPermission();
+        } catch (_) {}
       }
       _ready = true;
     } catch (_) {
@@ -94,24 +96,28 @@ class NotificationService {
   }) async {
     final now = DateTime.now();
     if (!when.isAfter(now.add(const Duration(seconds: 5)))) return;
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(when, tz.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'house_tests',
-          'House tests',
-          channelDescription: 'Upcoming, started, and ended house test alerts',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-    );
+    final scheduledTime = tz.TZDateTime.from(when, tz.local);
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        _notificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (_) {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        _notificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
   }
 
   Future<void> _showNow({
@@ -123,15 +129,22 @@ class NotificationService {
       id,
       title,
       body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'house_tests',
-          'House tests',
-          channelDescription: 'Upcoming, started, and ended house test alerts',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
+      _notificationDetails(),
+    );
+  }
+
+  NotificationDetails _notificationDetails() {
+    return const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'house_tests',
+        'House tests',
+        channelDescription: 'Upcoming, started, and ended house test alerts',
+        category: AndroidNotificationCategory.alarm,
+        importance: Importance.max,
+        priority: Priority.max,
+      ),
+      iOS: DarwinNotificationDetails(
+        interruptionLevel: InterruptionLevel.timeSensitive,
       ),
     );
   }
