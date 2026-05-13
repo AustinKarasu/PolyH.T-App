@@ -32,6 +32,11 @@ jobs:
   build:
     name: Build and Publish
     runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.vars.outputs.version_name }}
+      build_number: ${{ steps.vars.outputs.build_number }}
+      api_base_url: ${{ steps.vars.outputs.api_base_url }}
+      latest_release_base_url: ${{ steps.vars.outputs.latest_release_base_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -196,47 +201,25 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Resolve release values
-        id: vars
-        shell: bash
-        run: |
-          VERSION_NAME="${{ github.event.inputs.versionName }}"
-          BUILD_NUMBER="${{ github.event.inputs.buildNumber }}"
-          if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
-          if [ -z "$BUILD_NUMBER" ]; then
-            if [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.([0-9]+)$ ]]; then
-              BUILD_NUMBER="${BASH_REMATCH[1]}"
-            else
-              BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
-            fi
-          fi
-          API_BASE_URL="${{ vars.API_BASE_URL }}"
-          if [ -z "$API_BASE_URL" ]; then API_BASE_URL="https://backend-two-mauve-83.vercel.app/api"; fi
-          LATEST_RELEASE_BASE_URL="https://github.com/${{ github.repository }}/releases/latest/download"
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "api_base_url=$API_BASE_URL" >> "$GITHUB_OUTPUT"
-          echo "latest_release_base_url=$LATEST_RELEASE_BASE_URL" >> "$GITHUB_OUTPUT"
-
       - name: Build unsigned Admin iOS app
         working-directory: apps/polyht_admin
         run: |
           flutter pub get
           flutter build ios --release --no-codesign \
-            --build-name "${{ steps.vars.outputs.version_name }}" \
-            --build-number "${{ steps.vars.outputs.build_number }}" \
-            --dart-define=API_BASE_URL="${{ steps.vars.outputs.api_base_url }}" \
-            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.latest_release_base_url }}/polyht_admin_latest.json"
+            --build-name "${{ needs.build.outputs.version_name }}" \
+            --build-number "${{ needs.build.outputs.build_number }}" \
+            --dart-define=API_BASE_URL="${{ needs.build.outputs.api_base_url }}" \
+            --dart-define=UPDATE_MANIFEST_URL="${{ needs.build.outputs.latest_release_base_url }}/polyht_admin_latest.json"
 
       - name: Build unsigned Student iOS app
         working-directory: apps/polyht_student
         run: |
           flutter pub get
           flutter build ios --release --no-codesign \
-            --build-name "${{ steps.vars.outputs.version_name }}" \
-            --build-number "${{ steps.vars.outputs.build_number }}" \
-            --dart-define=API_BASE_URL="${{ steps.vars.outputs.api_base_url }}" \
-            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.latest_release_base_url }}/polyht_student_latest.json"
+            --build-name "${{ needs.build.outputs.version_name }}" \
+            --build-number "${{ needs.build.outputs.build_number }}" \
+            --dart-define=API_BASE_URL="${{ needs.build.outputs.api_base_url }}" \
+            --dart-define=UPDATE_MANIFEST_URL="${{ needs.build.outputs.latest_release_base_url }}/polyht_student_latest.json"
 
       - name: Package unsigned iOS apps
         shell: bash
@@ -247,11 +230,11 @@ jobs:
             rm -rf Payload
             mkdir Payload
             cp -R "apps/$dir/build/ios/iphoneos/Runner.app" Payload/
-            zip -qry "public/releases/$filename-v${{ steps.vars.outputs.version_name }}+${{ steps.vars.outputs.build_number }}-unsigned.ipa" Payload
+            zip -qry "public/releases/$filename-v${{ needs.build.outputs.version_name }}+${{ needs.build.outputs.build_number }}-unsigned.ipa" Payload
           done
 
       - name: Attach iOS artifacts to GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.vars.outputs.version_name }}
+          tag_name: v${{ needs.build.outputs.version_name }}
           files: public/releases/*.ipa
