@@ -10,7 +10,6 @@ class AuthProvider extends ChangeNotifier {
 
   AppUser? user;
   bool isLoading = true;
-  bool requiresEmailOtp = false;
   bool requiresTwoFactor = false;
   String? error;
 
@@ -21,12 +20,10 @@ class AuthProvider extends ChangeNotifier {
     if (token != null) {
       try {
         user = await _authService.me();
-        requiresEmailOtp = false;
         requiresTwoFactor = false;
       } catch (_) {
         await _tokenStorage.clear();
         user = null;
-        requiresEmailOtp = false;
         requiresTwoFactor = false;
       }
     }
@@ -34,23 +31,18 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String identifier, String password, {String? emailOtpCode, String? totpCode}) async {
+  Future<void> login(String identifier, String password, {String? totpCode}) async {
     isLoading = true;
     error = null;
-    if ((emailOtpCode != null && emailOtpCode.trim().isNotEmpty) && (totpCode == null || totpCode.trim().isEmpty)) {
-      requiresEmailOtp = false;
-    }
     if (totpCode != null && totpCode.trim().isNotEmpty) {
       requiresTwoFactor = false;
     }
     notifyListeners();
     try {
-      user = await _authService.login(identifier, password, emailOtpCode: emailOtpCode, totpCode: totpCode);
-      requiresEmailOtp = false;
+      user = await _authService.login(identifier, password, totpCode: totpCode);
       requiresTwoFactor = false;
     } on TwoFactorRequiredException catch (err) {
-      requiresEmailOtp = err.requiresEmailOtp;
-      requiresTwoFactor = err.requiresTwoFactor;
+      requiresTwoFactor = true;
       error = err.toString();
     } catch (err) {
       error = err.toString();
@@ -63,7 +55,6 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     user = null;
-    requiresEmailOtp = false;
     requiresTwoFactor = false;
     error = null;
     notifyListeners();

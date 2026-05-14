@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const { query } = require('../config/db');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
-const emailService = require('./email.service');
 const storageService = require('./storage.service');
 
 async function login(identifier, password, context = {}) {
@@ -38,39 +37,15 @@ async function login(identifier, password, context = {}) {
     throw new ApiError(401, 'Invalid credentials');
   }
 
-  if (!user.email) {
-    throw new ApiError(422, 'Email is required for OTP login. Ask an admin to add an email to this account.');
-  }
-
-  if (!context.emailOtpCode) {
-    await sendLoginEmailOtp(user);
-    return {
-      requiresEmailOtp: true,
-      requiresTwoFactor: Boolean(user.two_factor_enabled),
-      message: 'OTP sent to your email'
-    };
-  }
-
-  const emailOtp = await findEmailOtp(user.id, 'login', context.emailOtpCode);
-  if (!emailOtp) {
-    await recordLoginFailure(identifier, context.ipAddress);
-    return {
-      requiresEmailOtp: true,
-      requiresTwoFactor: Boolean(user.two_factor_enabled),
-      message: 'Invalid email OTP'
-    };
-  }
-
   if (user.two_factor_enabled) {
     if (!context.totpCode) {
-      return { requiresEmailOtp: true, requiresTwoFactor: true, message: 'Authenticator code required' };
+      return { requiresTwoFactor: true, message: 'Authenticator code required' };
     }
     if (!user.two_factor_secret || !verifyTotp(context.totpCode, user.two_factor_secret)) {
       await recordLoginFailure(identifier, context.ipAddress);
-      return { requiresEmailOtp: true, requiresTwoFactor: true, message: 'Invalid authenticator code' };
+      return { requiresTwoFactor: true, message: 'Invalid authenticator code' };
     }
   }
-  await consumeEmailOtp(emailOtp.id);
 
   const jti = crypto.randomUUID();
   const token = jwt.sign(
@@ -267,40 +242,6 @@ async function clearLoginFailures(identifier, ipAddress = '') {
     'DELETE FROM login_failures WHERE identifier_hash = $1 AND ip_address = $2',
     [loginFailureKey(identifier), ipAddress || 'unknown']
   );
-}
-
-async function sendLoginEmailOtp(user) {
-  if (!user.email) return;
-  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-  await query(
-    `INSERT INTO email_otps (user_id, purpose, code_hash, expires_at)
-     VALUES ($1, $2, $3, CURRENT_TIMESTAMP + INTERVAL '10 minutes')`,
-    [user.id, 'login', hashOtp(code)]
-  );
-  await emailService.sendLoginOtp(user, code);
-}
-
-async function findEmailOtp(userId, purpose, code) {
-  const clean = String(code || '').replace(/\s+/g, '');
-  if (!/^\d{6,8}$/.test(clean)) return null;
-  const rows = await query(
-    `SELECT id, code_hash
-     FROM email_otps
-     WHERE user_id = $1 AND purpose = $2 AND consumed_at IS NULL AND expires_at > CURRENT_TIMESTAMP
-     ORDER BY created_at DESC
-     LIMIT 5`,
-    [userId, purpose]
-  );
-  const match = rows.find((row) => row.code_hash === hashOtp(clean));
-  return match || null;
-}
-
-async function consumeEmailOtp(otpId) {
-  await query('UPDATE email_otps SET consumed_at = CURRENT_TIMESTAMP WHERE id = $1', [otpId]);
-}
-
-function hashOtp(code) {
-  return crypto.createHash('sha256').update(`${env.jwtSecret}:${code}`).digest('hex');
 }
 
 module.exports = {

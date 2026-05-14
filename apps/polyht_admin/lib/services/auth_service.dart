@@ -3,15 +3,9 @@ import 'api_client.dart';
 import 'token_storage.dart';
 
 class TwoFactorRequiredException implements Exception {
-  const TwoFactorRequiredException(
-    this.message, {
-    required this.requiresEmailOtp,
-    required this.requiresTwoFactor,
-  });
+  const TwoFactorRequiredException([this.message = 'Enter your authenticator code to continue.']);
 
   final String message;
-  final bool requiresEmailOtp;
-  final bool requiresTwoFactor;
 
   @override
   String toString() => message;
@@ -25,19 +19,14 @@ class AuthService {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
 
-  Future<AppUser> login(String identifier, String password, {String? emailOtpCode, String? totpCode}) async {
+  Future<AppUser> login(String identifier, String password, {String? totpCode}) async {
     final data = await _apiClient.post('/auth/login', {
       'identifier': identifier,
       'password': password,
-      if (emailOtpCode != null && emailOtpCode.isNotEmpty) 'emailOtpCode': emailOtpCode,
       if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode,
     });
-    if (data['requiresEmailOtp'] == true || data['requiresTwoFactor'] == true) {
-      throw TwoFactorRequiredException(
-        data['message']?.toString() ?? 'Enter your verification code to continue.',
-        requiresEmailOtp: data['requiresEmailOtp'] == true,
-        requiresTwoFactor: data['requiresTwoFactor'] == true,
-      );
+    if (data['requiresTwoFactor'] == true) {
+      throw TwoFactorRequiredException(data['message']?.toString() ?? 'Enter your authenticator code to continue.');
     }
     final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
     if (user.role != 'admin') {

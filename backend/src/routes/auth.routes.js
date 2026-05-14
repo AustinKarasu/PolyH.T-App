@@ -12,7 +12,6 @@ router.post(
   [
     body('identifier').trim().notEmpty(),
     body('password').isLength({ min: 6 }),
-    body('emailOtpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
     body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
     body('deviceLabel').optional().trim().isLength({ max: 160 })
   ],

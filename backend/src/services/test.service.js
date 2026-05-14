@@ -1,7 +1,6 @@
 const { query, transaction } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 const attemptService = require('./attempt.service');
-const emailService = require('./email.service');
 const storageService = require('./storage.service');
 
 async function createTest({ title, branchId, semester, scheduledStart, scheduledEnd, timeLimitMinutes, file, createdBy }) {
@@ -22,9 +21,7 @@ async function createTest({ title, branchId, semester, scheduledStart, scheduled
     ]
   );
 
-  const test = await getTestById(rows[0].id);
-  await notifyStudentsForTest(test);
-  return test;
+  return getTestById(rows[0].id);
 }
 
 async function getTestById(id) {
@@ -117,9 +114,7 @@ async function updateTest(id, patch) {
      time_limit_minutes = $6, is_active = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8`,
     [patch.title, patch.branchId, patch.semester, patch.scheduledStart, patch.scheduledEnd, patch.timeLimitMinutes, patch.isActive, id]
   );
-  const test = await getTestById(id);
-  await notifyStudentsForTest(test);
-  return test;
+  return getTestById(id);
 }
 
 async function setTestActive(id, isActive) {
@@ -128,9 +123,7 @@ async function setTestActive(id, isActive) {
     'UPDATE tests SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
     [isActive, id]
   );
-  const test = await getTestById(id);
-  if (isActive) await notifyStudentsForTest(test);
-  return test;
+  return getTestById(id);
 }
 
 async function endTestNow(id) {
@@ -200,60 +193,4 @@ function statusForTest(test) {
   return 'live';
 }
 
-async function notifyStudentsForTest(test) {
-  if (!test.is_active) return;
-  const status = statusForTest(test);
-  if (status === 'ended') return;
-
-  const kind = status === 'live' ? 'started' : 'scheduled';
-  if (kind === 'started' && test.start_email_notified_at) return;
-  if (kind === 'scheduled' && test.scheduled_email_notified_at) return;
-
-  const students = await query(
-    `SELECT id, full_name, email
-     FROM users
-     WHERE role = 'student'
-       AND is_active = true
-       AND branch_id = $1
-       AND semester = $2
-       AND email IS NOT NULL
-       AND email <> ''`,
-    [test.branch_id, test.semester]
-  );
-  if (students.length === 0) {
-    await markTestEmailNotified(test.id, kind);
-    return;
-  }
-
-  const results = await Promise.allSettled(students.map((student) => emailService.sendTestNotice(student, test, kind)));
-  const failed = results.filter((result) => result.status === 'rejected').length;
-  if (failed > 0) {
-    console.error(`Failed to send ${failed} ${kind} test email(s) for test ${test.id}`);
-  }
-  await markTestEmailNotified(test.id, kind);
-}
-
-async function notifyStartedTests() {
-  const tests = await query(
-    `SELECT t.*, b.name AS branch_name, b.code AS branch_code
-     FROM tests t
-     JOIN branches b ON b.id = t.branch_id
-     WHERE t.is_active = true
-       AND t.deleted_at IS NULL
-       AND t.start_email_notified_at IS NULL
-       AND CURRENT_TIMESTAMP BETWEEN t.scheduled_start AND t.scheduled_end
-     ORDER BY t.scheduled_start ASC
-     LIMIT 20`
-  );
-  for (const test of tests) {
-    await notifyStudentsForTest(test);
-  }
-  return { notifiedTests: tests.length };
-}
-
-async function markTestEmailNotified(testId, kind) {
-  const column = kind === 'started' ? 'start_email_notified_at' : 'scheduled_email_notified_at';
-  await query(`UPDATE tests SET ${column} = COALESCE(${column}, CURRENT_TIMESTAMP) WHERE id = $1`, [testId]);
-}
-
-module.exports = { createTest, listAdminTests, listStudentTests, listStudentHistory, updateTest, setTestActive, endTestNow, replacePdf, removeTest, getStudentPdf, getAdminPdf, notifyStartedTests };
+module.exports = { createTest, listAdminTests, listStudentTests, listStudentHistory, updateTest, setTestActive, endTestNow, replacePdf, removeTest, getStudentPdf, getAdminPdf };
