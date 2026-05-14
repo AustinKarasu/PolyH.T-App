@@ -36,8 +36,8 @@ router.post(
   requireRole('admin'),
   [
     body('fullName').trim().isLength({ min: 2, max: 120 }),
-    body('collegeId').trim().isLength({ min: 2, max: 60 }),
-    body('password').isStrongPassword({
+    body('collegeId').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 2, max: 60 }),
+    body('password').optional({ nullable: true, checkFalsy: true }).isStrongPassword({
       minLength: 8,
       minLowercase: 1,
       minUppercase: 1,
@@ -46,10 +46,10 @@ router.post(
     }),
     body('branchId').isInt({ min: 1 }),
     body('email').optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail(),
-    body('dob').optional({ nullable: true, checkFalsy: true }).isISO8601(),
+    body('dob').isISO8601(),
     body('semester').optional({ nullable: true, checkFalsy: true }).isInt({ min: 1, max: 6 }),
     body('rollNo').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 40 }),
-    body('boardRollNo').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 40 }),
+    body('boardRollNo').trim().isLength({ min: 2, max: 40 }),
     body('collegeName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 200 }),
     body('courseName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
     body('guardianName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),

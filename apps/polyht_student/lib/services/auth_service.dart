@@ -84,12 +84,12 @@ class AuthService {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
-    required String totpCode,
+    String? totpCode,
   }) async {
     await _apiClient.post('/auth/me/password', {
       'currentPassword': currentPassword,
       'newPassword': newPassword,
-      'totpCode': totpCode,
+      if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode,
     });
   }
 

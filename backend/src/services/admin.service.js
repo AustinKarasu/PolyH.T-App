@@ -10,7 +10,17 @@ async function listAdmins() {
   );
 }
 
-async function createAdmin({ fullName, email, password }) {
+async function requirePrimaryAdmin(adminId) {
+  const rows = await query(
+    'SELECT is_primary_admin FROM users WHERE id = $1 AND role = $2 AND is_active = true LIMIT 1',
+    [adminId, 'admin']
+  );
+  if (!rows[0]) throw new ApiError(401, 'Admin account is inactive or no longer exists');
+  if (!rows[0].is_primary_admin) throw new ApiError(403, 'Only the primary admin can use this action');
+}
+
+async function createAdmin({ fullName, email, password }, actingAdminId) {
+  await requirePrimaryAdmin(actingAdminId);
   const passwordHash = await bcrypt.hash(password, 12);
   try {
     const rows = await query(
@@ -31,6 +41,9 @@ async function updateAdmin(adminId, patch, actingAdminId) {
   const existingRows = await query('SELECT id, is_primary_admin FROM users WHERE id = $1 AND role = $2 LIMIT 1', [adminId, 'admin']);
   const existing = existingRows[0];
   if (!existing) throw new ApiError(404, 'Admin account not found');
+  const actingRows = await query('SELECT is_primary_admin FROM users WHERE id = $1 AND role = $2 AND is_active = true LIMIT 1', [actingAdminId, 'admin']);
+  const actingAdmin = actingRows[0];
+  if (!actingAdmin) throw new ApiError(401, 'Admin account is inactive or no longer exists');
 
   const sets = [];
   const params = [];
@@ -41,6 +54,9 @@ async function updateAdmin(adminId, patch, actingAdminId) {
     params.push(patch.fullName);
   }
   if (patch.email !== undefined) {
+    if (existing.is_primary_admin && !actingAdmin.is_primary_admin) {
+      throw new ApiError(403, 'Only the primary admin can change the primary admin email');
+    }
     sets.push(`email = $${idx++}`);
     params.push(patch.email || null);
   }
@@ -91,7 +107,8 @@ async function setAdminActive(adminId, isActive, actingAdminId) {
   );
 }
 
-async function setPrimaryAdmin(adminId) {
+async function setPrimaryAdmin(adminId, actingAdminId) {
+  await requirePrimaryAdmin(actingAdminId);
   const rows = await query('SELECT id, is_active FROM users WHERE id = $1 AND role = $2 LIMIT 1', [adminId, 'admin']);
   if (!rows[0]) throw new ApiError(404, 'Admin account not found');
   if (!rows[0].is_active) throw new ApiError(422, 'Only an active admin can be primary');

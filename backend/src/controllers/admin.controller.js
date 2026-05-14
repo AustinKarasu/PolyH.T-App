@@ -11,7 +11,7 @@ async function listAdmins(_req, res, next) {
 
 async function createAdmin(req, res, next) {
   try {
-    const admin = await adminService.createAdmin(req.body);
+    const admin = await adminService.createAdmin(req.body, req.user.sub);
     res.status(201).json({ admin });
   } catch (err) {
     next(err);
@@ -33,7 +33,7 @@ async function setAdminActive(req, res, next) {
 
 async function setPrimaryAdmin(req, res, next) {
   try {
-    await adminService.setPrimaryAdmin(Number(req.params.id));
+    await adminService.setPrimaryAdmin(Number(req.params.id), req.user.sub);
     res.json({ status: 'updated' });
   } catch (err) {
     next(err);

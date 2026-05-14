@@ -18,7 +18,9 @@ async function login(identifier, password, context = {}) {
             b.name AS branch_name, b.code AS branch_code
      FROM users u
      LEFT JOIN branches b ON b.id = u.branch_id
-     WHERE u.email = $1 OR u.college_id = $1
+     WHERE (u.role = 'admin' AND u.email = $1)
+        OR (u.role = 'admin' AND u.college_id = $1)
+        OR (u.role = 'student' AND u.board_roll_no = $1)
      LIMIT 1`,
     [identifier]
   );
@@ -121,10 +123,7 @@ async function changeCurrentUserPassword(userId, { currentPassword, newPassword,
   );
   const user = rows[0];
   if (!user) throw new ApiError(401, 'User account is inactive or no longer exists');
-  if (!user.two_factor_enabled || !user.two_factor_secret) {
-    throw new ApiError(403, 'Enable 2FA before changing your password');
-  }
-  if (!verifyTotp(totpCode, user.two_factor_secret)) {
+  if (user.two_factor_enabled && !verifyTotp(totpCode, user.two_factor_secret)) {
     throw new ApiError(422, 'Invalid authenticator code');
   }
   const matches = await bcrypt.compare(currentPassword, user.password_hash);

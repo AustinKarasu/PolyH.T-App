@@ -32,6 +32,7 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPrimaryAdmin = context.watch<AuthProvider>().user?.isPrimaryAdmin == true;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Accounts'),
@@ -40,7 +41,7 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
           IconButton(
             tooltip: 'Import Excel',
             icon: const Icon(Icons.upload_file_rounded),
-            onPressed: _bulkBusy ? null : _importAdmins,
+            onPressed: !isPrimaryAdmin || _bulkBusy ? null : _importAdmins,
           ),
           IconButton(
             tooltip: 'Export Excel',
@@ -60,7 +61,7 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateDialog,
+        onPressed: isPrimaryAdmin ? _showCreateDialog : null,
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Add Admin'),
       ),
@@ -80,6 +81,7 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) => _AdminTile(
               admin: admins[index],
+              canManagePrimary: isPrimaryAdmin,
               onPrimary: () async {
                 await _service.setPrimary(admins[index].id);
                 _refresh();
@@ -391,12 +393,14 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
 class _AdminTile extends StatelessWidget {
   const _AdminTile({
     required this.admin,
+    required this.canManagePrimary,
     required this.onPrimary,
     required this.onToggle,
     required this.onDelete,
   });
 
   final AdminAccount admin;
+  final bool canManagePrimary;
   final VoidCallback onPrimary;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
@@ -441,7 +445,7 @@ class _AdminTile extends StatelessWidget {
               if (value == 'delete') onDelete();
             },
             itemBuilder: (_) => [
-              if (!admin.isPrimaryAdmin) const PopupMenuItem(value: 'primary', child: Text('Make primary')),
+              if (canManagePrimary && !admin.isPrimaryAdmin) const PopupMenuItem(value: 'primary', child: Text('Make primary')),
               PopupMenuItem(value: 'toggle', child: Text(admin.isActive ? 'Deactivate' : 'Activate')),
               if (!admin.isPrimaryAdmin) const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],

@@ -46,7 +46,7 @@ router.post(
       minNumbers: 1,
       minSymbols: 1
     }),
-    body('totpCode').trim().isLength({ min: 6, max: 8 })
+    body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 })
   ],
   validate,
   authController.changePassword

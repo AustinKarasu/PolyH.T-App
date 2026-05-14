@@ -34,9 +34,9 @@ class ExcelBulkService {
   Future<BulkImportResult> importStudents(List<int> bytes, List<Branch> branches) async {
     final rows = _readRows(bytes);
     final existing = await _studentService.fetchAllStudents();
-    final byCollegeId = {
+    final byBoardRollNo = {
       for (final student in existing)
-        if ((student.collegeId ?? '').trim().isNotEmpty) student.collegeId!.trim().toLowerCase(): student,
+        if ((student.boardRollNo ?? '').trim().isNotEmpty) student.boardRollNo!.trim().toLowerCase(): student,
     };
     final branchLookup = _branchLookup(branches);
     var created = 0;
@@ -47,20 +47,17 @@ class ExcelBulkService {
     for (final row in rows) {
       final number = row.rowNumber;
       final fullName = row.value(['full_name', 'full name', 'name', 'student name']);
-      final collegeId = row.value(['college_id', 'college id', 'login id', 'student id']);
+      final collegeId = row.value(['college_id', 'college id', 'student id']);
+      final boardRollNo = row.value(['board_roll_no', 'board roll no', 'login id']);
+      final dob = row.value(['dob', 'date_of_birth', 'date of birth']);
       final password = row.value(['password', 'temporary password', 'temp password']);
       final branchKey = row.value(['branch_code', 'branch code', 'branch', 'branch_name', 'branch name', 'branch_id', 'branch id']);
       final branch = branchLookup[_norm(branchKey)];
-      final existingStudent = byCollegeId[collegeId.toLowerCase()];
+      final existingStudent = byBoardRollNo[boardRollNo.toLowerCase()];
 
-      if (fullName.isEmpty || collegeId.isEmpty || branch == null) {
+      if (fullName.isEmpty || boardRollNo.isEmpty || dob.isEmpty || branch == null) {
         failed++;
-        messages.add('Row $number: full name, college ID, and valid branch are required.');
-        continue;
-      }
-      if (existingStudent == null && password.isEmpty) {
-        failed++;
-        messages.add('Row $number: password is required for new students.');
+        messages.add('Row $number: full name, board roll no, DOB, and valid branch are required.');
         continue;
       }
 
@@ -68,20 +65,21 @@ class ExcelBulkService {
         if (existingStudent == null) {
           final student = await _studentService.createStudent(
             fullName: fullName,
+            boardRollNo: boardRollNo,
+            dob: dob,
             collegeId: collegeId,
             password: password,
             branchId: branch.id,
             email: row.value(['email']),
             semester: _int(row.value(['semester', 'sem'])),
             rollNo: row.value(['roll_no', 'roll no']),
-            boardRollNo: row.value(['board_roll_no', 'board roll no']),
             courseName: row.value(['course_name', 'course', 'course name']),
             guardianName: row.value(['guardian_name', 'guardian', 'guardian name']),
             phone: row.value(['phone', 'mobile']),
             address: row.value(['address']),
             admissionYear: _int(row.value(['admission_year', 'admission year'])),
           );
-          byCollegeId[collegeId.toLowerCase()] = student;
+          byBoardRollNo[boardRollNo.toLowerCase()] = student;
           created++;
         } else {
           await _studentService.updateStudent(
@@ -91,9 +89,10 @@ class ExcelBulkService {
             password: password,
             branchId: branch.id,
             email: row.value(['email']),
+            dob: dob,
             semester: _int(row.value(['semester', 'sem'])),
             rollNo: row.value(['roll_no', 'roll no']),
-            boardRollNo: row.value(['board_roll_no', 'board roll no']),
+            boardRollNo: boardRollNo,
             courseName: row.value(['course_name', 'course', 'course name']),
             guardianName: row.value(['guardian_name', 'guardian', 'guardian name']),
             phone: row.value(['phone', 'mobile']),
@@ -169,6 +168,7 @@ class ExcelBulkService {
       'full_name',
       'college_id',
       'password',
+      'dob',
       'branch_code',
       'semester',
       'email',
@@ -186,6 +186,7 @@ class ExcelBulkService {
         student.fullName,
         student.collegeId ?? '',
         '',
+        student.dob ?? '',
         student.branchCode ?? '',
         student.semester?.toString() ?? '',
         student.email ?? '',

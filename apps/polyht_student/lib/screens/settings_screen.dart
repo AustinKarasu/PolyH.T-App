@@ -38,10 +38,10 @@ class SettingsScreen extends StatelessWidget {
               const Icon(Icons.lock_reset_rounded, color: AppTheme.primary),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(enabled ? 'Change your password using 2FA verification' : 'Enable 2FA before changing your password'),
+                child: Text(enabled ? 'Change your password using 2FA verification' : 'Change your password'),
               ),
               FilledButton(
-                onPressed: enabled ? () => _changePassword(context) : null,
+                onPressed: () => _changePassword(context),
                 child: const Text('Change'),
               ),
             ]),
@@ -66,6 +66,7 @@ class SettingsScreen extends StatelessWidget {
     final next = TextEditingController();
     final confirm = TextEditingController();
     final code = TextEditingController();
+    final twoFactorEnabled = auth.user?.twoFactorEnabled == true;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -77,8 +78,10 @@ class SettingsScreen extends StatelessWidget {
             TextField(controller: next, obscureText: true, decoration: const InputDecoration(labelText: 'New password')),
             const SizedBox(height: 12),
             TextField(controller: confirm, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password')),
-            const SizedBox(height: 12),
-            TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+            if (twoFactorEnabled) ...[
+              const SizedBox(height: 12),
+              TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
+            ],
           ]),
         ),
         actions: [

@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               TextFormField(
                                 controller: _collegeIdController,
                                 decoration: const InputDecoration(
-                                  labelText: 'College ID',
+                                  labelText: 'Board roll no',
                                   prefixIcon: Icon(Icons.badge_outlined),
                                 ),
                                 textInputAction: TextInputAction.next,

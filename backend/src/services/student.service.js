@@ -12,6 +12,12 @@ const STUDENT_SELECT = `
   FROM users u
   LEFT JOIN branches b ON b.id = u.branch_id`;
 
+function passwordFromDob(dob) {
+  const match = String(dob || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) throw new ApiError(422, 'Student date of birth is required for the default password');
+  return `${match[3]}${match[2]}${match[1]}`;
+}
+
 async function getStudentProfile(userId) {
   const rows = await query(`${STUDENT_SELECT} WHERE u.id = $1 AND u.is_active = true LIMIT 1`, [userId]);
   if (!rows[0]) throw new ApiError(404, 'Student not found');
@@ -96,7 +102,9 @@ async function getStudentById(studentId) {
 }
 
 async function adminCreateStudent(payload) {
-  const passwordHash = await bcrypt.hash(payload.password, 12);
+  const boardRollNo = String(payload.boardRollNo || '').trim();
+  if (!boardRollNo) throw new ApiError(422, 'Board roll no is required for student login');
+  const passwordHash = await bcrypt.hash(payload.password || passwordFromDob(payload.dob), 12);
   try {
     const rows = await query(
       `INSERT INTO users (
@@ -109,13 +117,13 @@ async function adminCreateStudent(payload) {
       [
         payload.fullName,
         payload.email || null,
-        payload.collegeId,
+        boardRollNo,
         passwordHash,
         payload.branchId,
         payload.dob || null,
         payload.semester || null,
         payload.rollNo || null,
-        payload.boardRollNo || null,
+        boardRollNo,
         payload.collegeName || 'Govt. Polytechnic Kangra',
         payload.courseName || null,
         payload.guardianName || null,
@@ -148,6 +156,17 @@ async function adminUpdateStudent(studentId, patch) {
     if (patch[camelKey] !== undefined) {
       sets.push(`${key} = $${idx++}`);
       params.push(patch[camelKey]);
+    }
+  }
+  if (patch.boardRollNo !== undefined) {
+    const boardRollNo = String(patch.boardRollNo || '').trim();
+    if (!boardRollNo) throw new ApiError(422, 'Board roll no is required for student login');
+    const collegeIdIndex = sets.findIndex((set) => set.startsWith('college_id = '));
+    if (collegeIdIndex >= 0) {
+      params[collegeIdIndex] = boardRollNo;
+    } else {
+      sets.push(`college_id = $${idx++}`);
+      params.push(boardRollNo);
     }
   }
   if (patch.password !== undefined && patch.password !== '') {

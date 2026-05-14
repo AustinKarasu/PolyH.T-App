@@ -93,7 +93,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
-    required String totpCode,
+    String? totpCode,
   }) async {
     await _authService.changePassword(
       currentPassword: currentPassword,

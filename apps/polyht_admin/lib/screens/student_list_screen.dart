@@ -205,7 +205,7 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
   final _testService = TestService();
   final _fullNameController = TextEditingController();
   final _collegeIdController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _dobController = TextEditingController();
   final _emailController = TextEditingController();
   final _semesterController = TextEditingController();
   final _rollNoController = TextEditingController();
@@ -229,7 +229,7 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
   void dispose() {
     _fullNameController.dispose();
     _collegeIdController.dispose();
-    _passwordController.dispose();
+    _dobController.dispose();
     _emailController.dispose();
     _semesterController.dispose();
     _rollNoController.dispose();
@@ -247,19 +247,15 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
     return null;
   }
 
-  String? _strongPassword(String? value) {
-    final password = value ?? '';
-    if (password.length < 8) return 'Use at least 8 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'Add an uppercase letter';
-    if (!RegExp(r'[a-z]').hasMatch(password)) return 'Add a lowercase letter';
-    if (!RegExp(r'[0-9]').hasMatch(password)) return 'Add a number';
-    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) return 'Add a symbol';
-    return null;
-  }
-
   int? _optionalInt(TextEditingController controller) {
     final text = controller.text.trim();
     return text.isEmpty ? null : int.tryParse(text);
+  }
+
+  String? _date(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Required';
+    return RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) ? null : 'Use yyyy-mm-dd';
   }
 
   Future<void> _save() async {
@@ -273,13 +269,13 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
     try {
       await _studentService.createStudent(
         fullName: _fullNameController.text.trim(),
-        collegeId: _collegeIdController.text.trim(),
-        password: _passwordController.text,
+        boardRollNo: _boardRollNoController.text.trim(),
+        dob: _dobController.text.trim(),
         branchId: _selectedBranch!.id,
+        collegeId: _collegeIdController.text.trim(),
         email: _emailController.text.trim(),
         semester: _optionalInt(_semesterController),
         rollNo: _rollNoController.text.trim(),
-        boardRollNo: _boardRollNoController.text.trim(),
         courseName: _courseController.text.trim(),
         guardianName: _guardianController.text.trim(),
         phone: _phoneController.text.trim(),
@@ -324,8 +320,7 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _collegeIdController,
-                  decoration: const InputDecoration(labelText: 'College ID / Login ID'),
-                  validator: _required,
+                  decoration: const InputDecoration(labelText: 'College ID (optional)'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<Branch>(
@@ -338,12 +333,9 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
                   validator: (value) => value == null ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Temporary password'),
-                  validator: _strongPassword,
-                ),
+                TextFormField(controller: _boardRollNoController, decoration: const InputDecoration(labelText: 'Board roll no / Login ID'), validator: _required),
+                const SizedBox(height: 12),
+                TextFormField(controller: _dobController, keyboardType: TextInputType.datetime, decoration: const InputDecoration(labelText: 'Date of birth (yyyy-mm-dd)'), validator: _date),
                 const SizedBox(height: 18),
                 Text('Optional profile details', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
@@ -352,8 +344,6 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
                 TextFormField(controller: _semesterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Semester')),
                 const SizedBox(height: 12),
                 TextFormField(controller: _rollNoController, decoration: const InputDecoration(labelText: 'Roll no')),
-                const SizedBox(height: 12),
-                TextFormField(controller: _boardRollNoController, decoration: const InputDecoration(labelText: 'Board roll no')),
                 const SizedBox(height: 12),
                 TextFormField(controller: _courseController, decoration: const InputDecoration(labelText: 'Course')),
                 const SizedBox(height: 12),
@@ -610,6 +600,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
   late final TextEditingController _fullNameController;
   late final TextEditingController _collegeIdController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _dobController;
   late final TextEditingController _emailController;
   late final TextEditingController _semesterController;
   late final TextEditingController _rollNoController;
@@ -631,6 +622,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
     _fullNameController = TextEditingController(text: s.fullName);
     _collegeIdController = TextEditingController(text: s.collegeId ?? '');
     _passwordController = TextEditingController();
+    _dobController = TextEditingController(text: s.dob ?? '');
     _emailController = TextEditingController(text: s.email ?? '');
     _semesterController = TextEditingController(text: s.semester?.toString() ?? '');
     _rollNoController = TextEditingController(text: s.rollNo ?? '');
@@ -658,6 +650,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
     _fullNameController.dispose();
     _collegeIdController.dispose();
     _passwordController.dispose();
+    _dobController.dispose();
     _emailController.dispose();
     _semesterController.dispose();
     _rollNoController.dispose();
@@ -692,6 +685,12 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
     return year != null && year >= 2000 && year <= 2100 ? null : 'Enter a valid year';
   }
 
+  String? _optionalDate(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    return RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) ? null : 'Use yyyy-mm-dd';
+  }
+
   String? _optionalStrongPassword(String? value) {
     final password = value ?? '';
     if (password.isEmpty) return null;
@@ -714,6 +713,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
         password: _passwordController.text,
         branchId: _selectedBranch!.id,
         email: _emailController.text.trim(),
+        dob: _dobController.text.trim(),
         semester: _optionalInt(_semesterController),
         rollNo: _rollNoController.text.trim(),
         boardRollNo: _boardRollNoController.text.trim(),
@@ -754,7 +754,7 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
               children: [
                 TextFormField(controller: _fullNameController, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
                 const SizedBox(height: 12),
-                TextFormField(controller: _collegeIdController, decoration: const InputDecoration(labelText: 'College ID / Login ID'), validator: _required),
+                TextFormField(controller: _collegeIdController, decoration: const InputDecoration(labelText: 'College ID (optional)')),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<Branch>(
                   value: _selectedBranch,
@@ -775,11 +775,13 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
                 const SizedBox(height: 12),
                 TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: _optionalEmail),
                 const SizedBox(height: 12),
+                TextFormField(controller: _dobController, keyboardType: TextInputType.datetime, decoration: const InputDecoration(labelText: 'Date of birth (yyyy-mm-dd)'), validator: _optionalDate),
+                const SizedBox(height: 12),
                 TextFormField(controller: _semesterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Semester'), validator: _optionalSemester),
                 const SizedBox(height: 12),
                 TextFormField(controller: _rollNoController, decoration: const InputDecoration(labelText: 'Roll no')),
                 const SizedBox(height: 12),
-                TextFormField(controller: _boardRollNoController, decoration: const InputDecoration(labelText: 'Board roll no')),
+                TextFormField(controller: _boardRollNoController, decoration: const InputDecoration(labelText: 'Board roll no / Login ID'), validator: _required),
                 const SizedBox(height: 12),
                 TextFormField(controller: _courseController, decoration: const InputDecoration(labelText: 'Course')),
                 const SizedBox(height: 12),

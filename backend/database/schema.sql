@@ -115,3 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_jti ON auth_sessions(token_jti);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_one_primary_admin
   ON users (role)
   WHERE role = 'admin' AND is_primary_admin = TRUE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_student_board_roll_no
+  ON users (board_roll_no)
+  WHERE role = 'student' AND board_roll_no IS NOT NULL AND board_roll_no <> '';
