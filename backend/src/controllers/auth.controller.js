@@ -4,6 +4,7 @@ async function login(req, res, next) {
   try {
     const result = await authService.login(req.body.identifier, req.body.password, {
       deviceLabel: req.body.deviceLabel,
+      emailOtpCode: req.body.emailOtpCode,
       totpCode: req.body.totpCode,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')

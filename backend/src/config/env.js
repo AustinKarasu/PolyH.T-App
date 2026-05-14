@@ -23,6 +23,18 @@ const env = {
   },
   jwtSecret: process.env.JWT_SECRET || 'dev_secret_change_me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
+  cronSecret: process.env.CRON_SECRET || '',
+  appTitle: process.env.APP_TITLE || 'PolyH.T',
+  appDescription: process.env.APP_DESCRIPTION || 'Polytechnic house test platform',
+  mail: {
+    host: process.env.SMTP_HOST || '',
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1',
+    user: process.env.SMTP_USER || '',
+    password: process.env.SMTP_PASSWORD || '',
+    from: process.env.MAIL_FROM || 'PolyH.T <no-reply@gpkangra.edu>',
+    enabled: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD)
+  },
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
   storage: {
     driver: process.env.STORAGE_DRIVER || 'local',

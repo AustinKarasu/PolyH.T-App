@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS tests (
   time_limit_minutes INT NOT NULL DEFAULT 60,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_by INT NOT NULL REFERENCES users(id),
+  scheduled_email_notified_at TIMESTAMPTZ,
+  start_email_notified_at TIMESTAMPTZ,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -105,12 +107,23 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   revoked_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS email_otps (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  purpose VARCHAR(40) NOT NULL,
+  code_hash VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_attempts_student ON test_attempts(student_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_test ON test_attempts(test_id);
 CREATE INDEX IF NOT EXISTS idx_events_attempt ON exam_events(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_events_test ON exam_events(test_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_jti ON auth_sessions(token_jti);
+CREATE INDEX IF NOT EXISTS idx_email_otps_user_purpose ON email_otps(user_id, purpose, expires_at);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_one_primary_admin
   ON users (role)

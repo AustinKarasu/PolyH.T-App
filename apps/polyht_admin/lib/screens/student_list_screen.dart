@@ -258,6 +258,25 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
     return RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) ? null : 'Use yyyy-mm-dd';
   }
 
+  String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  Future<void> _pickDob() async {
+    final initial = DateTime.tryParse(_dobController.text.trim()) ?? DateTime(2005);
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1970),
+      lastDate: DateTime.now(),
+    );
+    if (selected != null) {
+      _dobController.text = _formatDate(selected);
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedBranch == null) {
@@ -335,7 +354,16 @@ class _AddStudentScreenState extends State<_AddStudentScreen> {
                 const SizedBox(height: 12),
                 TextFormField(controller: _boardRollNoController, decoration: const InputDecoration(labelText: 'Board roll no / Login ID'), validator: _required),
                 const SizedBox(height: 12),
-                TextFormField(controller: _dobController, keyboardType: TextInputType.datetime, decoration: const InputDecoration(labelText: 'Date of birth (yyyy-mm-dd)'), validator: _date),
+                TextFormField(
+                  controller: _dobController,
+                  readOnly: true,
+                  onTap: _saving ? null : _pickDob,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of birth',
+                    suffixIcon: Icon(Icons.calendar_month_rounded),
+                  ),
+                  validator: _date,
+                ),
                 const SizedBox(height: 18),
                 Text('Optional profile details', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
@@ -691,6 +719,25 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
     return RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) ? null : 'Use yyyy-mm-dd';
   }
 
+  String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  Future<void> _pickDob() async {
+    final initial = DateTime.tryParse(_dobController.text.trim()) ?? DateTime(2005);
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1970),
+      lastDate: DateTime.now(),
+    );
+    if (selected != null) {
+      _dobController.text = _formatDate(selected);
+    }
+  }
+
   String? _optionalStrongPassword(String? value) {
     final password = value ?? '';
     if (password.isEmpty) return null;
@@ -775,7 +822,16 @@ class _EditStudentScreenState extends State<_EditStudentScreen> {
                 const SizedBox(height: 12),
                 TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: _optionalEmail),
                 const SizedBox(height: 12),
-                TextFormField(controller: _dobController, keyboardType: TextInputType.datetime, decoration: const InputDecoration(labelText: 'Date of birth (yyyy-mm-dd)'), validator: _optionalDate),
+                TextFormField(
+                  controller: _dobController,
+                  readOnly: true,
+                  onTap: _saving ? null : _pickDob,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of birth',
+                    suffixIcon: Icon(Icons.calendar_month_rounded),
+                  ),
+                  validator: _optionalDate,
+                ),
                 const SizedBox(height: 12),
                 TextFormField(controller: _semesterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Semester'), validator: _optionalSemester),
                 const SizedBox(height: 12),

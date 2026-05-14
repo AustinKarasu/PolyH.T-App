@@ -15,11 +15,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
   final _collegeIdController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailOtpController = TextEditingController();
   final _totpController = TextEditingController();
   late AnimationController _animController;
   late Animation<double> _fadeIn;
   late Animation<Offset> _slideUp;
   bool _obscurePassword = true;
+  bool _showEmailOtp = false;
   bool _showTotp = false;
 
   @override
@@ -40,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _animController.dispose();
     _collegeIdController.dispose();
     _passwordController.dispose();
+    _emailOtpController.dispose();
     _totpController.dispose();
     super.dispose();
   }
@@ -47,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final showEmailOtp = _showEmailOtp || auth.requiresEmailOtp;
     final showTotp = _showTotp || auth.requiresTwoFactor;
     return Scaffold(
       body: Container(
@@ -168,6 +172,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 onFieldSubmitted: (_) => _submit(),
                                 validator: (value) => value == null || value.length < 6 ? 'Minimum 6 characters' : null,
                               ),
+                              if (showEmailOtp) ...[
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _emailOtpController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email OTP',
+                                    prefixIcon: Icon(Icons.mark_email_read_outlined),
+                                  ),
+                                  textInputAction: showTotp ? TextInputAction.next : TextInputAction.done,
+                                  onFieldSubmitted: (_) {
+                                    if (!showTotp) _submit();
+                                  },
+                                  validator: (value) => showEmailOtp && (value == null || value.trim().length < 6) ? 'Enter the email OTP' : null,
+                                ),
+                              ],
                               if (showTotp) ...[
                                 const SizedBox(height: 16),
                                 TextFormField(
@@ -217,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           height: 22,
                                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                                         )
-                                      : Text(showTotp ? 'Verify & sign in' : 'Sign in'),
+                                      : Text(showEmailOtp || showTotp ? 'Verify & sign in' : 'Send OTP'),
                                 ),
                               ),
                             ],
@@ -250,11 +270,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     await auth.login(
       _collegeIdController.text.trim(),
       _passwordController.text,
+      emailOtpCode: _emailOtpController.text.trim(),
       totpCode: _totpController.text.trim(),
     );
-    if (mounted && auth.requiresTwoFactor) {
+    if (mounted && (auth.requiresEmailOtp || auth.requiresTwoFactor)) {
       setState(() {
-        _showTotp = true;
+        _showEmailOtp = auth.requiresEmailOtp;
+        _showTotp = auth.requiresTwoFactor;
         _totpController.clear();
       });
     }
