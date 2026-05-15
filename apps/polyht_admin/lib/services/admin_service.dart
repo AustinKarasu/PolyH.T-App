@@ -1,5 +1,6 @@
 import '../models/admin_account.dart';
 import '../models/admin_application.dart';
+import '../models/app_user.dart';
 import 'api_client.dart';
 
 class AdminService {
@@ -8,8 +9,54 @@ class AdminService {
   final ApiClient _apiClient;
 
   Future<List<AdminAccount>> fetchAdmins() async {
-    final data = await _apiClient.get('/admins');
-    return (data['admins'] as List).map((item) => AdminAccount.fromJson(item)).toList();
+    try {
+      final data = await _apiClient.get('/admins');
+      return (data['admins'] as List)
+          .map((item) => AdminAccount.fromJson(item))
+          .toList();
+    } catch (err) {
+      final message = err.toString().toLowerCase();
+      if (!message.contains('req is not defined')) rethrow;
+      return _fetchAdminsFromApplicationsFallback();
+    }
+  }
+
+  Future<List<AdminAccount>> _fetchAdminsFromApplicationsFallback() async {
+    final meData = await _apiClient.get('/auth/me');
+    final currentUser =
+        AppUser.fromJson(meData['user'] as Map<String, dynamic>);
+    final applicationsData = await _apiClient.get('/admins/applications');
+    final applications = applicationsData['applications'] as List;
+    final admins = <AdminAccount>[
+      AdminAccount(
+        id: currentUser.id,
+        fullName: currentUser.fullName,
+        email: currentUser.email ?? 'admin@gpkangra.edu',
+        isActive: currentUser.isActive ?? true,
+        twoFactorEnabled: currentUser.twoFactorEnabled ?? false,
+        isPrimaryAdmin: currentUser.isPrimaryAdmin ?? true,
+      ),
+    ];
+    final currentEmail = (currentUser.email ?? '').trim().toLowerCase();
+    final seenIds = <int>{currentUser.id};
+    for (final item in applications) {
+      final json = item as Map<String, dynamic>;
+      if (json['status'] != 'approved') continue;
+      final id = json['created_admin_id'] as int?;
+      final email = (json['email'] as String? ?? '').trim();
+      if (id == null || seenIds.contains(id)) continue;
+      if (email.toLowerCase() == currentEmail) continue;
+      seenIds.add(id);
+      admins.add(AdminAccount(
+        id: id,
+        fullName: json['full_name'] as String? ?? email,
+        email: email,
+        isActive: true,
+        twoFactorEnabled: false,
+        isPrimaryAdmin: false,
+      ));
+    }
+    return admins;
   }
 
   Future<void> createAdmin({
@@ -30,7 +77,9 @@ class AdminService {
 
   Future<List<AdminApplication>> fetchApplications() async {
     final data = await _apiClient.get('/admins/applications');
-    return (data['applications'] as List).map((item) => AdminApplication.fromJson(item)).toList();
+    return (data['applications'] as List)
+        .map((item) => AdminApplication.fromJson(item))
+        .toList();
   }
 
   Future<void> approveApplication(int applicationId) async {

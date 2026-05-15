@@ -1,10 +1,10 @@
 {
   "appId": "polyht",
-  "latestVersion": "1.0.47",
-  "latestBuild": 48,
+  "latestVersion": "1.0.48",
+  "latestBuild": 49,
   "mandatory": true,
-  "releaseNotes": "Required update:\n- Repairs the admin accounts directory so approved applications appear as active admins.\n- Keeps admin@gpkangra.edu active as the primary superuser account.\n- Opens app updates through the Play Store when published there, with APK fallback for direct installs.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.47/polyht-v1.0.47+48.apk",
+  "releaseNotes": "Required update:\n- Fixes the Admin Accounts page when an older backend returns req is not defined.\n- Shows the primary superuser and approved admin accounts using the working applications endpoint as a fallback.\n- Keeps Play Store update prompts with APK fallback for direct installs.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.48/polyht-v1.0.48+49.apk",
   "packageName": "in.polyht.polyht_admin",
   "usePlayStore": true,
   "playStoreUrl": "https://play.google.com/store/apps/details?id=in.polyht.polyht_admin"
