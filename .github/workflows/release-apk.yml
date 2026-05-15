@@ -61,7 +61,10 @@ jobs:
           RELEASE_NOTES="${{ github.event.inputs.releaseNotes }}"
           if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
           if [ -z "$BUILD_NUMBER" ]; then
-            PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_student_latest.json)"
+            PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_latest.json 2>/dev/null || true)"
+            if [ -z "$PREVIOUS_BUILD" ] || [ "$PREVIOUS_BUILD" = "null" ]; then
+              PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_admin_latest.json 2>/dev/null || true)"
+            fi
             if [ -n "$PREVIOUS_BUILD" ] && [ "$PREVIOUS_BUILD" != "null" ]; then
               BUILD_NUMBER=$((PREVIOUS_BUILD + 1))
             fi
@@ -74,8 +77,8 @@ jobs:
           fi
           if [ -z "$BUILD_NUMBER" ]; then BUILD_NUMBER="${GITHUB_RUN_NUMBER}"; fi
           if [ -z "$MANDATORY" ]; then MANDATORY="true"; fi
-          if [ -z "$RELEASE_NOTES" ]; then RELEASE_NOTES="$(jq -r '.releaseNotes // empty' website/releases/polyht_student_latest.json)"; fi
-          if [ -z "$RELEASE_NOTES" ]; then RELEASE_NOTES="PolyH.T APK release."; fi
+          if [ -z "$RELEASE_NOTES" ]; then RELEASE_NOTES="$(jq -r '.releaseNotes // empty' website/releases/polyht_latest.json 2>/dev/null || true)"; fi
+          if [ -z "$RELEASE_NOTES" ] || [ "$RELEASE_NOTES" = "null" ]; then RELEASE_NOTES="Poly H.T combined APK release."; fi
           WEBSITE_BASE_URL="${{ vars.WEBSITE_BASE_URL }}"
           if [ -z "$WEBSITE_BASE_URL" ]; then WEBSITE_BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"; fi
           API_BASE_URL="${{ vars.API_BASE_URL }}"
@@ -103,7 +106,7 @@ jobs:
             echo "No Android signing secret configured; building unsigned release APKs."
             exit 0
           fi
-          for app in apps/polyht_admin apps/polyht_student; do
+          for app in apps/polyht_admin; do
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$app/android/release.jks"
             printf '%s\n' \
               "storePassword=$ANDROID_KEYSTORE_PASSWORD" \
@@ -112,7 +115,7 @@ jobs:
               "storeFile=release.jks" > "$app/android/key.properties"
           done
 
-      - name: Build Admin APK
+      - name: Build Poly H.T APK
         working-directory: apps/polyht_admin
         run: |
           flutter pub get
@@ -120,52 +123,30 @@ jobs:
             --build-name "${{ steps.vars.outputs.version_name }}" \
             --build-number "${{ steps.vars.outputs.build_number }}" \
             --dart-define=API_BASE_URL="${{ steps.vars.outputs.api_base_url }}" \
-            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.latest_release_base_url }}/polyht_admin_latest.json"
-
-      - name: Build Student APK
-        working-directory: apps/polyht_student
-        run: |
-          flutter pub get
-          flutter build apk --release \
-            --build-name "${{ steps.vars.outputs.version_name }}" \
-            --build-number "${{ steps.vars.outputs.build_number }}" \
-            --dart-define=API_BASE_URL="${{ steps.vars.outputs.api_base_url }}" \
-            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.latest_release_base_url }}/polyht_student_latest.json"
+            --dart-define=UPDATE_MANIFEST_URL="${{ steps.vars.outputs.latest_release_base_url }}/polyht_latest.json"
 
       - name: Prepare website release files
         shell: bash
         run: |
           mkdir -p public/releases
-          ADMIN_APK="polyht-admin-v${{ steps.vars.outputs.version_name }}+${{ steps.vars.outputs.build_number }}.apk"
-          STUDENT_APK="polyht-student-v${{ steps.vars.outputs.version_name }}+${{ steps.vars.outputs.build_number }}.apk"
-          cp apps/polyht_admin/build/app/outputs/flutter-apk/app-release.apk "public/releases/$ADMIN_APK"
-          cp apps/polyht_student/build/app/outputs/flutter-apk/app-release.apk "public/releases/$STUDENT_APK"
+          APP_APK="polyht-v${{ steps.vars.outputs.version_name }}+${{ steps.vars.outputs.build_number }}.apk"
+          cp apps/polyht_admin/build/app/outputs/flutter-apk/app-release.apk "public/releases/$APP_APK"
           jq -n \
-            --arg appId "polyht_admin" \
+            --arg appId "polyht" \
             --arg version "${{ steps.vars.outputs.version_name }}" \
             --argjson build "${{ steps.vars.outputs.build_number }}" \
             --argjson mandatory "${{ steps.vars.outputs.mandatory }}" \
             --arg notes "${{ steps.vars.outputs.release_notes }}" \
-            --arg download "${{ steps.vars.outputs.release_base_url }}/$ADMIN_APK" \
+            --arg download "${{ steps.vars.outputs.release_base_url }}/$APP_APK" \
             '{appId: $appId, latestVersion: $version, latestBuild: $build, mandatory: $mandatory, releaseNotes: $notes, downloadUrl: $download}' \
-            > public/releases/polyht_admin_latest.json
-          jq -n \
-            --arg appId "polyht_student" \
-            --arg version "${{ steps.vars.outputs.version_name }}" \
-            --argjson build "${{ steps.vars.outputs.build_number }}" \
-            --argjson mandatory "${{ steps.vars.outputs.mandatory }}" \
-            --arg notes "${{ steps.vars.outputs.release_notes }}" \
-            --arg download "${{ steps.vars.outputs.release_base_url }}/$STUDENT_APK" \
-            '{appId: $appId, latestVersion: $version, latestBuild: $build, mandatory: $mandatory, releaseNotes: $notes, downloadUrl: $download}' \
-            > public/releases/polyht_student_latest.json
+            > public/releases/polyht_latest.json
           printf '%s\n' \
             '<!doctype html>' \
             '<html>' \
-            '<head><meta charset="utf-8"><title>PolyH.T Downloads</title></head>' \
+            '<head><meta charset="utf-8"><title>Poly H.T Downloads</title></head>' \
             '<body>' \
-            '<h1>PolyH.T Downloads</h1>' \
-            "<p><a href=\"releases/$ADMIN_APK\">Download PolyH.T Admin</a></p>" \
-            "<p><a href=\"releases/$STUDENT_APK\">Download PolyH.T Student</a></p>" \
+            '<h1>Poly H.T Downloads</h1>' \
+            "<p><a href=\"releases/$APP_APK\">Download Poly H.T</a></p>" \
             '</body>' \
             '</html>' > public/index.html
 
@@ -173,7 +154,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.vars.outputs.version_name }}
-          name: PolyH.T v${{ steps.vars.outputs.version_name }}
+          name: Poly H.T v${{ steps.vars.outputs.version_name }}
           body: ${{ steps.vars.outputs.release_notes }}
           files: |
             public/releases/*.apk
@@ -201,7 +182,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Build unsigned Admin iOS app
+      - name: Build unsigned Poly H.T iOS app
         working-directory: apps/polyht_admin
         run: |
           flutter pub get
@@ -209,29 +190,16 @@ jobs:
             --build-name "${{ needs.build.outputs.version_name }}" \
             --build-number "${{ needs.build.outputs.build_number }}" \
             --dart-define=API_BASE_URL="${{ needs.build.outputs.api_base_url }}" \
-            --dart-define=UPDATE_MANIFEST_URL="${{ needs.build.outputs.latest_release_base_url }}/polyht_admin_latest.json"
-
-      - name: Build unsigned Student iOS app
-        working-directory: apps/polyht_student
-        run: |
-          flutter pub get
-          flutter build ios --release --no-codesign \
-            --build-name "${{ needs.build.outputs.version_name }}" \
-            --build-number "${{ needs.build.outputs.build_number }}" \
-            --dart-define=API_BASE_URL="${{ needs.build.outputs.api_base_url }}" \
-            --dart-define=UPDATE_MANIFEST_URL="${{ needs.build.outputs.latest_release_base_url }}/polyht_student_latest.json"
+            --dart-define=UPDATE_MANIFEST_URL="${{ needs.build.outputs.latest_release_base_url }}/polyht_latest.json"
 
       - name: Package unsigned iOS apps
         shell: bash
         run: |
           mkdir -p public/releases
-          for item in "admin:polyht_admin:polyht-admin" "student:polyht_student:polyht-student"; do
-            IFS=: read -r label dir filename <<< "$item"
-            rm -rf Payload
-            mkdir Payload
-            cp -R "apps/$dir/build/ios/iphoneos/Runner.app" Payload/
-            zip -qry "public/releases/$filename-v${{ needs.build.outputs.version_name }}+${{ needs.build.outputs.build_number }}-unsigned.ipa" Payload
-          done
+          rm -rf Payload
+          mkdir Payload
+          cp -R "apps/polyht_admin/build/ios/iphoneos/Runner.app" Payload/
+          zip -qry "public/releases/polyht-v${{ needs.build.outputs.version_name }}+${{ needs.build.outputs.build_number }}-unsigned.ipa" Payload
 
       - name: Attach iOS artifacts to GitHub release
         uses: softprops/action-gh-release@v2
