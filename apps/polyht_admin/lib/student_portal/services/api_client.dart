@@ -133,7 +133,7 @@ class ApiClient {
       final text = body.trim();
       final lower = text.toLowerCase();
       if (lower.startsWith('<!doctype') || lower.startsWith('<html')) {
-        return 'Server returned an HTML error page. Please update the app and try again.';
+        return 'The server route is not available yet. Please try again after the backend deployment finishes.';
       }
       return text.length > 240 ? '${text.substring(0, 240)}...' : text;
     }

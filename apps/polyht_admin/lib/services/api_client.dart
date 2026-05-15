@@ -177,7 +177,7 @@ class ApiClient {
       final text = body.trim();
       final lower = text.toLowerCase();
       if (lower.startsWith('<!doctype') || lower.startsWith('<html')) {
-        return 'Server returned an HTML error page. Please update the app and try again.';
+        return 'The server route is not available yet. Please try again after the backend deployment finishes.';
       }
       if (lower.startsWith('forbidden') || lower.contains('bom1::') || lower.contains('sfo1::') || lower.contains('iad1::')) {
         return 'Upload was blocked before it reached the app server. Use a PDF under 4 MB or re-export/compress the PDF, then try again.';
