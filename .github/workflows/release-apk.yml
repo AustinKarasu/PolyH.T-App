@@ -61,8 +61,13 @@ jobs:
           RELEASE_NOTES="${{ github.event.inputs.releaseNotes }}"
           if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
           if [ -z "$BUILD_NUMBER" ]; then
-            PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_latest.json 2>/dev/null || true)"
-            if [ -n "$PREVIOUS_BUILD" ] && [ "$PREVIOUS_BUILD" != "null" ]; then
+            PUBSPEC_BUILD="$(grep -E '^version:' apps/polyht_admin/pubspec.yaml | sed -E 's/^version: [0-9.]+\+([0-9]+).*/\1/' || true)"
+            if [ -n "$PUBSPEC_BUILD" ] && [ "$PUBSPEC_BUILD" != "null" ]; then
+              BUILD_NUMBER="$PUBSPEC_BUILD"
+            else
+              PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_latest.json 2>/dev/null || true)"
+            fi
+            if [ -z "$BUILD_NUMBER" ] && [ -n "$PREVIOUS_BUILD" ] && [ "$PREVIOUS_BUILD" != "null" ]; then
               BUILD_NUMBER=$((PREVIOUS_BUILD + 1))
             fi
           fi
@@ -85,7 +90,11 @@ jobs:
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           echo "mandatory=$MANDATORY" >> "$GITHUB_OUTPUT"
-          echo "release_notes=$RELEASE_NOTES" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_notes<<EOF"
+            printf '%s\n' "$RELEASE_NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
           echo "website_base_url=$WEBSITE_BASE_URL" >> "$GITHUB_OUTPUT"
           echo "api_base_url=$API_BASE_URL" >> "$GITHUB_OUTPUT"
           echo "release_base_url=$RELEASE_BASE_URL" >> "$GITHUB_OUTPUT"
@@ -137,7 +146,7 @@ jobs:
             --arg download "${{ steps.vars.outputs.release_base_url }}/$APP_APK" \
             --arg packageName "in.polyht.polyht_admin" \
             --arg playStoreUrl "https://play.google.com/store/apps/details?id=in.polyht.polyht_admin" \
-            '{appId: $appId, latestVersion: $version, latestBuild: $build, mandatory: $mandatory, releaseNotes: $notes, downloadUrl: $download, packageName: $packageName, playStoreUrl: $playStoreUrl}' \
+            '{appId: $appId, latestVersion: $version, latestBuild: $build, mandatory: $mandatory, releaseNotes: $notes, downloadUrl: $download, packageName: $packageName, usePlayStore: true, playStoreUrl: $playStoreUrl}' \
             > public/releases/polyht_latest.json
           printf '%s\n' \
             '<!doctype html>' \

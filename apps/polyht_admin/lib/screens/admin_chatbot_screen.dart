@@ -446,8 +446,8 @@ const _faqs = <_Faq>[
   _Faq(
       question: 'How do I update the app?',
       answer:
-          'The release manifest points to the latest GitHub release APK. Users should install the latest Poly H.T APK.',
-      keywords: ['update app', 'latest apk']),
+          'The update prompt opens the Poly H.T Play Store page when a Play Store build is available. GitHub release APKs remain available for direct installs.',
+      keywords: ['update app', 'latest apk', 'play store']),
   _Faq(
       question: 'Why do I see server route not available?',
       answer:

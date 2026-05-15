@@ -11,6 +11,7 @@ class AppUpdate {
     required this.latestBuild,
     required this.downloadUrl,
     required this.playStoreUrl,
+    required this.packageName,
     required this.releaseNotes,
     required this.mandatory,
   });
@@ -19,6 +20,7 @@ class AppUpdate {
   final int latestBuild;
   final String downloadUrl;
   final String playStoreUrl;
+  final String packageName;
   final String releaseNotes;
   final bool mandatory;
 
@@ -29,16 +31,21 @@ class AppUpdate {
       : 'A newer APK is ready to install.';
 
   factory AppUpdate.fromJson(Map<String, dynamic> json) {
-    final packageName =
-        json['packageName'] as String? ?? 'in.polyht.polyht_admin';
+    final packageName = json['packageName'] as String? ??
+        Uri.tryParse(json['playStoreUrl'] as String? ?? '')
+            ?.queryParameters['id'] ??
+        'in.polyht.polyht_admin';
     return AppUpdate(
-      latestVersion: json['latestVersion'] as String,
-      latestBuild: json['latestBuild'] as int,
-      downloadUrl: json['downloadUrl'] as String,
+      latestVersion: json['latestVersion'] as String? ?? '0.0.0',
+      latestBuild: json['latestBuild'] is int
+          ? json['latestBuild'] as int
+          : int.tryParse('${json['latestBuild']}') ?? 0,
+      downloadUrl: json['downloadUrl'] as String? ?? '',
       playStoreUrl: json['playStoreUrl'] as String? ??
           (json['usePlayStore'] == true
               ? 'https://play.google.com/store/apps/details?id=$packageName'
               : ''),
+      packageName: packageName,
       releaseNotes: json['releaseNotes'] as String? ?? '',
       mandatory: json['mandatory'] as bool? ?? false,
     );
@@ -65,9 +72,7 @@ class UpdateService {
 
   Future<void> openUpdate(AppUpdate update) async {
     if (update.usesPlayStore) {
-      final packageName =
-          Uri.parse(update.playStoreUrl).queryParameters['id'] ??
-              'in.polyht.polyht_admin';
+      final packageName = update.packageName;
       final marketUri = Uri.parse('market://details?id=$packageName');
       if (await launchUrl(marketUri, mode: LaunchMode.externalApplication)) {
         return;
@@ -77,6 +82,9 @@ class UpdateService {
         return;
       }
       throw Exception('Unable to open Play Store');
+    }
+    if (update.downloadUrl.isEmpty) {
+      throw Exception('Update link is not available yet');
     }
     final downloadUri = Uri.parse(update.downloadUrl);
     if (!await launchUrl(downloadUri, mode: LaunchMode.externalApplication)) {

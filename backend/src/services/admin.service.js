@@ -3,8 +3,11 @@ const { query, transaction } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 const authService = require('./auth.service');
 
+const PRIMARY_ADMIN_EMAIL = 'admin@gpkangra.edu';
+
 async function listAdmins(actingAdminId) {
   await requirePrimaryAdmin(actingAdminId);
+  await reconcileAdminDirectory();
   return query(
     `SELECT id, full_name, email, is_active, two_factor_enabled, is_primary_admin, created_at
      FROM users WHERE role = 'admin' ORDER BY is_primary_admin DESC, created_at DESC`
@@ -13,6 +16,7 @@ async function listAdmins(actingAdminId) {
 
 async function listApplications(actingAdminId) {
   await requirePrimaryAdmin(actingAdminId);
+  await reconcileAdminDirectory();
   return query(
     `SELECT id, full_name, first_name, middle_name, last_name, mobile, email,
             college_name, state_name, status, reviewed_by, reviewed_at,
@@ -58,27 +62,60 @@ async function approveApplication(applicationId, actingAdminId) {
   if (!app) throw new ApiError(404, 'Admin application not found');
   if (app.status !== 'pending') throw new ApiError(422, 'Only pending applications can be approved');
 
-  try {
-    const created = await transaction(async (tx) => {
-      const users = await tx(
-        `INSERT INTO users (
-           full_name, first_name, middle_name, last_name, email, password_hash, role,
-           phone, college_name, state_name, is_active, is_primary_admin
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, 'admin', $7, $8, $9, TRUE, FALSE)
-         RETURNING id`,
-        [
-          app.full_name,
-          app.first_name,
-          app.middle_name,
-          app.last_name,
-          app.email,
-          app.password_hash,
-          app.mobile,
-          app.college_name,
-          app.state_name
-        ]
-      );
+  const created = await transaction(async (tx) => {
+    const existing = await tx(
+      `SELECT id
+       FROM users
+       WHERE lower(email) = lower($1) AND role = 'admin'
+       LIMIT 1`,
+      [app.email]
+    );
+    const users = existing[0]
+      ? await tx(
+          `UPDATE users
+           SET full_name = $1,
+               first_name = $2,
+               middle_name = $3,
+               last_name = $4,
+               password_hash = $5,
+               phone = $6,
+               college_name = $7,
+               state_name = $8,
+               is_active = TRUE,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $9 AND role = 'admin'
+           RETURNING id`,
+          [
+            app.full_name,
+            app.first_name,
+            app.middle_name,
+            app.last_name,
+            app.password_hash,
+            app.mobile,
+            app.college_name,
+            app.state_name,
+            existing[0].id
+          ]
+        )
+      : await tx(
+          `INSERT INTO users (
+             full_name, first_name, middle_name, last_name, email, password_hash, role,
+             phone, college_name, state_name, is_active, is_primary_admin
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, 'admin', $7, $8, $9, TRUE, FALSE)
+           RETURNING id`,
+          [
+            app.full_name,
+            app.first_name,
+            app.middle_name,
+            app.last_name,
+            app.email,
+            app.password_hash,
+            app.mobile,
+            app.college_name,
+            app.state_name
+          ]
+        );
       await tx(
         `UPDATE admin_applications
          SET status = 'approved', reviewed_by = $1, reviewed_at = CURRENT_TIMESTAMP, created_admin_id = $2
@@ -86,17 +123,14 @@ async function approveApplication(applicationId, actingAdminId) {
         [actingAdminId, users[0].id, applicationId]
       );
       return users;
-    });
-    const adminRows = await query(
-      `SELECT id, full_name, email, is_active, two_factor_enabled, is_primary_admin, created_at
-       FROM users WHERE id = $1 LIMIT 1`,
-      [created[0].id]
-    );
-    return adminRows[0];
-  } catch (err) {
-    if (err.code === '23505') throw new ApiError(409, 'Admin email already exists');
-    throw err;
-  }
+  });
+  await reconcileAdminDirectory();
+  const adminRows = await query(
+    `SELECT id, full_name, email, is_active, two_factor_enabled, is_primary_admin, created_at
+     FROM users WHERE id = $1 LIMIT 1`,
+    [created[0].id]
+  );
+  return adminRows[0];
 }
 
 async function rejectApplication(applicationId, actingAdminId) {
@@ -240,6 +274,108 @@ async function clearData(actingAdminId, { totpCode, tests = false, history = fal
     if (sessions) {
       await tx('UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE revoked_at IS NULL', []);
     }
+  });
+}
+
+async function reconcileAdminDirectory() {
+  await transaction(async (tx) => {
+    await tx(
+      `WITH approved_apps AS (
+         SELECT *
+         FROM admin_applications a
+         WHERE a.status = 'approved'
+       ),
+       reactivated_admins AS (
+         UPDATE users u
+         SET is_active = TRUE,
+             updated_at = CURRENT_TIMESTAMP
+         FROM approved_apps a
+         WHERE lower(u.email) = lower(a.email)
+           AND u.role = 'admin'
+           AND u.is_active = FALSE
+         RETURNING u.id, lower(u.email) AS email_key
+       ),
+       existing_admins AS (
+         SELECT u.id, lower(u.email) AS email_key
+         FROM users u
+         JOIN approved_apps a ON lower(u.email) = lower(a.email)
+         WHERE u.role = 'admin'
+       ),
+       inserted_admins AS (
+         INSERT INTO users (
+           full_name, first_name, middle_name, last_name, email, password_hash, role,
+           phone, college_name, state_name, is_active, is_primary_admin
+         )
+         SELECT
+           a.full_name, a.first_name, a.middle_name, a.last_name, a.email,
+           a.password_hash, 'admin', a.mobile, a.college_name, a.state_name,
+           TRUE, FALSE
+         FROM approved_apps a
+         WHERE NOT EXISTS (
+           SELECT 1 FROM users u WHERE lower(u.email) = lower(a.email)
+         )
+         RETURNING id, lower(email) AS email_key
+       ),
+       linked_admins AS (
+         SELECT * FROM existing_admins
+         UNION
+         SELECT * FROM inserted_admins
+         UNION
+         SELECT * FROM reactivated_admins
+       )
+       UPDATE admin_applications a
+       SET created_admin_id = l.id
+       FROM linked_admins l
+       WHERE lower(a.email) = l.email_key
+         AND a.status = 'approved'
+         AND (a.created_admin_id IS NULL OR a.created_admin_id <> l.id)`,
+      []
+    );
+
+    const primaryRows = await tx(
+      `UPDATE users
+       SET is_primary_admin = TRUE,
+           is_active = TRUE,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE role = 'admin' AND lower(email) = $1
+       RETURNING id`,
+      [PRIMARY_ADMIN_EMAIL]
+    );
+
+    if (primaryRows[0]) {
+      await tx(
+        `UPDATE users
+         SET is_primary_admin = FALSE,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE role = 'admin' AND id <> $1 AND is_primary_admin = TRUE`,
+        [primaryRows[0].id]
+      );
+      return;
+    }
+
+    const existingPrimary = await tx(
+      `SELECT id FROM users
+       WHERE role = 'admin' AND is_primary_admin = TRUE AND is_active = TRUE
+       LIMIT 1`,
+      []
+    );
+    if (existingPrimary[0]) return;
+
+    const fallback = await tx(
+      `SELECT id FROM users
+       WHERE role = 'admin' AND is_active = TRUE
+       ORDER BY created_at ASC, id ASC
+       LIMIT 1`,
+      []
+    );
+    if (!fallback[0]) return;
+    await tx(
+      `UPDATE users
+       SET is_primary_admin = TRUE,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND role = 'admin'`,
+      [fallback[0].id]
+    );
   });
 }
 

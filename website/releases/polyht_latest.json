@@ -1,10 +1,11 @@
 {
   "appId": "polyht",
-  "latestVersion": "1.0.45",
-  "latestBuild": 46,
+  "latestVersion": "1.0.47",
+  "latestBuild": 48,
   "mandatory": true,
-  "releaseNotes": "Required update: combines admin and student portals, strengthens student field validation, improves admin approvals, and keeps the assistant focused on Poly H.T workflows.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.45/polyht-v1.0.45+46.apk",
+  "releaseNotes": "Required update:\n- Repairs the admin accounts directory so approved applications appear as active admins.\n- Keeps admin@gpkangra.edu active as the primary superuser account.\n- Opens app updates through the Play Store when published there, with APK fallback for direct installs.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.47/polyht-v1.0.47+48.apk",
   "packageName": "in.polyht.polyht_admin",
+  "usePlayStore": true,
   "playStoreUrl": "https://play.google.com/store/apps/details?id=in.polyht.polyht_admin"
 }
