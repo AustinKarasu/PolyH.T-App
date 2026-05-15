@@ -27,13 +27,12 @@ base64 -w 0 release.jks
 1. Open GitHub Actions.
 2. Run `Release Apps`.
 3. Enter a new `versionName` and a higher `buildNumber`.
-4. The workflow builds Admin and Student Android APKs, creates a GitHub Release, attaches APKs plus unsigned iOS `.ipa` artifacts, and publishes:
-   - `/releases/polyht_admin_latest.json`
-   - `/releases/polyht_student_latest.json`
-   - both APK files
+4. The workflow builds one combined Android APK from `apps/polyht_admin`, creates a GitHub Release, attaches the APK plus unsigned iOS `.ipa` artifact, and publishes:
+   - `/releases/polyht_latest.json`
+   - one combined `polyht-v<version>+<build>.apk` file
 
 The iOS artifacts are unsigned because Apple requires a macOS signing identity and provisioning profile for device-installable `.ipa` files. Add Apple signing secrets and a signed export step before using the iOS files for normal App Store/TestFlight/device distribution.
 
 ## App Update Button
 
-Both apps have an update button in the main app bar. Android does not allow normal apps to silently self-install APKs, so the button opens the newest APK download link from the update manifest.
+The combined app has an update button in the main app bar. Android does not allow normal apps to silently self-install APKs, so the button opens the newest APK download link from the update manifest.

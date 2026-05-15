@@ -11,7 +11,11 @@ import 'admin_service.dart';
 import 'student_service.dart';
 
 class BulkImportResult {
-  const BulkImportResult({required this.created, required this.updated, required this.failed, required this.messages});
+  const BulkImportResult(
+      {required this.created,
+      required this.updated,
+      required this.failed,
+      required this.messages});
 
   final int created;
   final int updated;
@@ -31,12 +35,14 @@ class ExcelBulkService {
   final StudentService _studentService;
   final AdminService _adminService;
 
-  Future<BulkImportResult> importStudents(List<int> bytes, List<Branch> branches) async {
+  Future<BulkImportResult> importStudents(
+      List<int> bytes, List<Branch> branches) async {
     final rows = _readRows(bytes);
     final existing = await _studentService.fetchAllStudents();
     final byBoardRollNo = {
       for (final student in existing)
-        if ((student.boardRollNo ?? '').trim().isNotEmpty) student.boardRollNo!.trim().toLowerCase(): student,
+        if ((student.boardRollNo ?? '').trim().isNotEmpty)
+          student.boardRollNo!.trim().toLowerCase(): student,
     };
     final branchLookup = _branchLookup(branches);
     var created = 0;
@@ -46,18 +52,60 @@ class ExcelBulkService {
 
     for (final row in rows) {
       final number = row.rowNumber;
-      final fullName = row.value(['Name', 'full_name', 'full name', 'student name']);
+      final fullName =
+          row.value(['Name', 'full_name', 'full name', 'student name']);
       final collegeId = row.value(['college_id', 'college id', 'student id']);
-      final boardRollNo = row.value(['BR NO', 'board_roll_no', 'board roll no', 'login id']);
+      final boardRollNo =
+          row.value(['BR NO', 'board_roll_no', 'board roll no', 'login id']);
       final dob = row.value(['dob', 'date_of_birth', 'date of birth']);
-      final password = row.value(['password', 'temporary password', 'temp password']);
-      final branchKey = row.value(['branch_code', 'branch code', 'branch', 'branch_name', 'branch name', 'branch_id', 'branch id']);
+      final password =
+          row.value(['password', 'temporary password', 'temp password']);
+      final email = row.value(['email']);
+      final semester = _int(row.value(['semester', 'sem']));
+      final rollNo = row.value(['roll_no', 'roll no']);
+      final courseName = row.value(['course_name', 'course', 'course name']);
+      final collegeName = row.value(['college']);
+      final guardianName = row
+          .value(['Father Name', 'guardian_name', 'guardian', 'guardian name']);
+      final phone = row.value(['Mobile No', 'phone', 'mobile']);
+      final address = row.value(['address']);
+      final admissionYear =
+          _int(row.value(['Joining year', 'admission_year', 'admission year']));
+      final dropoutYear =
+          _int(row.value(['drop out year', 'dropout_year', 'dropout year']));
+      final branchKey = row.value([
+        'branch_code',
+        'branch code',
+        'branch',
+        'branch_name',
+        'branch name',
+        'branch_id',
+        'branch id'
+      ]);
       final branch = branchLookup[_norm(branchKey)];
       final existingStudent = byBoardRollNo[boardRollNo.toLowerCase()];
 
-      if (fullName.isEmpty || boardRollNo.isEmpty || dob.isEmpty || branch == null) {
+      if (fullName.isEmpty ||
+          collegeId.isEmpty ||
+          boardRollNo.isEmpty ||
+          dob.isEmpty ||
+          password.isEmpty ||
+          email.isEmpty ||
+          semester == null ||
+          semester < 1 ||
+          semester > 6 ||
+          rollNo.isEmpty ||
+          courseName.isEmpty ||
+          collegeName.isEmpty ||
+          guardianName.isEmpty ||
+          phone.isEmpty ||
+          address.isEmpty ||
+          admissionYear == null ||
+          dropoutYear == null ||
+          branch == null) {
         failed++;
-        messages.add('Row $number: full name, board roll no, DOB, and valid branch are required.');
+        messages.add(
+            'Row $number: every student field is required, branch must be valid, and semester must be 1 to 6.');
         continue;
       }
 
@@ -68,18 +116,18 @@ class ExcelBulkService {
             boardRollNo: boardRollNo,
             dob: dob,
             collegeId: collegeId,
-            password: password.isEmpty ? dob : password,
+            password: password,
             branchId: branch.id,
-            email: row.value(['email']),
-            semester: _int(row.value(['semester', 'sem'])),
-            rollNo: row.value(['roll_no', 'roll no']),
-            courseName: row.value(['course_name', 'course', 'course name']),
-            collegeName: row.value(['college']),
-            guardianName: row.value(['Father Name', 'guardian_name', 'guardian', 'guardian name']),
-            phone: row.value(['Mobile No', 'phone', 'mobile']),
-            address: row.value(['address']),
-            admissionYear: _int(row.value(['Joining year', 'admission_year', 'admission year'])),
-            dropoutYear: _int(row.value(['drop out year', 'dropout_year', 'dropout year'])),
+            email: email,
+            semester: semester,
+            rollNo: rollNo,
+            courseName: courseName,
+            collegeName: collegeName,
+            guardianName: guardianName,
+            phone: phone,
+            address: address,
+            admissionYear: admissionYear,
+            dropoutYear: dropoutYear,
           );
           byBoardRollNo[boardRollNo.toLowerCase()] = student;
           created++;
@@ -88,21 +136,22 @@ class ExcelBulkService {
             id: existingStudent.id,
             fullName: fullName,
             collegeId: collegeId,
-            password: password.isEmpty ? dob : password,
+            password: password,
             branchId: branch.id,
-            email: row.value(['email']),
+            email: email,
             dob: dob,
-            semester: _int(row.value(['semester', 'sem'])),
-            rollNo: row.value(['roll_no', 'roll no']),
+            semester: semester,
+            rollNo: rollNo,
             boardRollNo: boardRollNo,
-            courseName: row.value(['course_name', 'course', 'course name']),
-            collegeName: row.value(['college']),
-            guardianName: row.value(['Father Name', 'guardian_name', 'guardian', 'guardian name']),
-            phone: row.value(['Mobile No', 'phone', 'mobile']),
-            address: row.value(['address']),
-            admissionYear: _int(row.value(['Joining year', 'admission_year', 'admission year'])),
-            dropoutYear: _int(row.value(['drop out year', 'dropout_year', 'dropout year'])),
-            isActive: _bool(row.value(['is_active', 'active', 'status'])) ?? existingStudent.isActive,
+            courseName: courseName,
+            collegeName: collegeName,
+            guardianName: guardianName,
+            phone: phone,
+            address: address,
+            admissionYear: admissionYear,
+            dropoutYear: dropoutYear,
+            isActive: _bool(row.value(['is_active', 'active', 'status'])) ??
+                existingStudent.isActive,
           );
           updated++;
         }
@@ -112,13 +161,16 @@ class ExcelBulkService {
       }
     }
 
-    return BulkImportResult(created: created, updated: updated, failed: failed, messages: messages);
+    return BulkImportResult(
+        created: created, updated: updated, failed: failed, messages: messages);
   }
 
   Future<BulkImportResult> importAdmins(List<int> bytes) async {
     final rows = _readRows(bytes);
     final admins = await _adminService.fetchAdmins();
-    final byEmail = {for (final admin in admins) admin.email.trim().toLowerCase(): admin};
+    final byEmail = {
+      for (final admin in admins) admin.email.trim().toLowerCase(): admin
+    };
     var created = 0;
     var updated = 0;
     var failed = 0;
@@ -126,9 +178,11 @@ class ExcelBulkService {
 
     for (final row in rows) {
       final number = row.rowNumber;
-      final fullName = row.value(['full_name', 'full name', 'name', 'admin name']);
+      final fullName =
+          row.value(['full_name', 'full name', 'name', 'admin name']);
       final email = row.value(['email', 'email id']);
-      final password = row.value(['password', 'temporary password', 'temp password']);
+      final password =
+          row.value(['password', 'temporary password', 'temp password']);
       final existing = byEmail[email.toLowerCase()];
 
       if (fullName.isEmpty || email.isEmpty) {
@@ -144,7 +198,8 @@ class ExcelBulkService {
 
       try {
         if (existing == null) {
-          await _adminService.createAdmin(fullName: fullName, email: email, password: password);
+          await _adminService.createAdmin(
+              fullName: fullName, email: email, password: password);
           created++;
         } else {
           await _adminService.updateAdmin(
@@ -152,7 +207,8 @@ class ExcelBulkService {
             fullName: fullName,
             email: email,
             password: password,
-            isActive: _bool(row.value(['is_active', 'active', 'status'])) ?? existing.isActive,
+            isActive: _bool(row.value(['is_active', 'active', 'status'])) ??
+                existing.isActive,
           );
           updated++;
         }
@@ -162,7 +218,8 @@ class ExcelBulkService {
       }
     }
 
-    return BulkImportResult(created: created, updated: updated, failed: failed, messages: messages);
+    return BulkImportResult(
+        created: created, updated: updated, failed: failed, messages: messages);
   }
 
   Future<File> exportStudents(List<AppUser> students) async {
@@ -206,7 +263,14 @@ class ExcelBulkService {
   Future<File> exportAdmins(List<AdminAccount> admins) async {
     final excel = Excel.createExcel();
     final sheet = _sheet(excel, 'Admins');
-    sheet.appendRow(_cells(['full_name', 'email', 'password', 'is_active', 'two_factor_enabled', 'is_primary_admin']));
+    sheet.appendRow(_cells([
+      'full_name',
+      'email',
+      'password',
+      'is_active',
+      'two_factor_enabled',
+      'is_primary_admin'
+    ]));
     for (final admin in admins) {
       sheet.appendRow(_cells([
         admin.fullName,
@@ -232,13 +296,15 @@ class ExcelBulkService {
     return sheet;
   }
 
-  List<CellValue?> _cells(List<String> values) => values.map<CellValue?>((value) => TextCellValue(value)).toList();
+  List<CellValue?> _cells(List<String> values) =>
+      values.map<CellValue?>((value) => TextCellValue(value)).toList();
 
   Future<File> _save(Excel excel, String prefix) async {
     final bytes = excel.save();
     if (bytes == null) throw Exception('Unable to create Excel file');
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/${prefix}_${DateTime.now().millisecondsSinceEpoch}.xlsx');
+    final file = File(
+        '${dir.path}/${prefix}_${DateTime.now().millisecondsSinceEpoch}.xlsx');
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
@@ -258,14 +324,17 @@ class ExcelBulkService {
       final key = _norm(_cellText(rows.first[i]));
       if (key.isNotEmpty) headers[key] = i;
     }
-    if (headers.isEmpty) throw Exception('First row must contain column headers');
+    if (headers.isEmpty) {
+      throw Exception('First row must contain column headers');
+    }
 
     final parsed = <_ExcelRow>[];
     for (var i = 1; i < rows.length; i++) {
       final values = <String, String>{};
       var hasData = false;
       headers.forEach((header, index) {
-        final value = index < rows[i].length ? _cellText(rows[i][index]).trim() : '';
+        final value =
+            index < rows[i].length ? _cellText(rows[i][index]).trim() : '';
         if (value.isNotEmpty) hasData = true;
         values[header] = value;
       });
@@ -293,7 +362,9 @@ class ExcelBulkService {
     if (value is DoubleCellValue) return value.value.toString();
     if (value is BoolCellValue) return value.value ? 'true' : 'false';
     if (value is DateCellValue) return _date(value.asDateTimeLocal());
-    if (value is DateTimeCellValue) return value.asDateTimeLocal().toIso8601String();
+    if (value is DateTimeCellValue) {
+      return value.asDateTimeLocal().toIso8601String();
+    }
     return value.toString();
   }
 
@@ -313,13 +384,17 @@ class ExcelBulkService {
     final trimmed = value.trim().toLowerCase();
     if (trimmed.isEmpty) return null;
     if (['true', 'yes', 'y', '1', 'active'].contains(trimmed)) return true;
-    if (['false', 'no', 'n', '0', 'inactive', 'disabled'].contains(trimmed)) return false;
+    if (['false', 'no', 'n', '0', 'inactive', 'disabled'].contains(trimmed)) {
+      return false;
+    }
     return null;
   }
 
-  String _norm(String value) => value.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), ' ');
+  String _norm(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), ' ');
 
-  String _cleanError(Object err) => err.toString().replaceFirst('Exception: ', '');
+  String _cleanError(Object err) =>
+      err.toString().replaceFirst('Exception: ', '');
 }
 
 class _ExcelRow {
@@ -336,5 +411,6 @@ class _ExcelRow {
     return '';
   }
 
-  static String _normalize(String value) => value.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), ' ');
+  static String _normalize(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), ' ');
 }

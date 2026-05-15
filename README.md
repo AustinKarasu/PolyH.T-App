@@ -2,14 +2,13 @@
 
 Govt. Polytechnic Kangra
 
-PolyH.T is a dual-app mobile examination system for securely administering and taking house tests. It includes two Flutter apps, a Node.js/Express REST API, a Supabase PostgreSQL database, and optional Supabase Storage/S3-compatible PDF storage.
+PolyH.T is a combined mobile examination system for securely administering and taking house tests. It includes one Flutter APK with Admin and Student portals, a Node.js/Express REST API, a Supabase PostgreSQL database, and optional Supabase Storage/S3-compatible PDF storage.
 
 ## Project Structure
 
 ```text
 apps/
-  polyht_admin/        Flutter Admin app
-  polyht_student/      Flutter Student app
+  polyht_admin/        Combined Flutter Admin and Student app
 backend/              Node.js Express API
   database/           SQL schema and migrations
   src/                Controllers, services, middleware, routes
@@ -75,7 +74,7 @@ cd backend
 npm run create-user
 ```
 
-### Flutter Apps
+### Flutter App
 
 Set the API base URL at build time:
 
@@ -86,7 +85,6 @@ flutter build apk --release --dart-define=API_BASE_URL=https://your-vercel-proje
 Local defaults are in:
 
 - `apps/polyht_admin/lib/config/api_config.dart`
-- `apps/polyht_student/lib/config/api_config.dart`
 
 ## Documentation
 
@@ -102,7 +100,7 @@ Local defaults are in:
 
 - Backend deployment to Vercel is configured in `.github/workflows/vercel-deploy.yml`.
 - App release automation is configured in `.github/workflows/release-apk.yml`.
-- The release workflow builds both Android APKs, creates a GitHub Release, attaches APKs plus unsigned iOS `.ipa` artifacts, and publishes update manifests.
+- The release workflow builds one combined Android APK, creates a GitHub Release, attaches the APK plus unsigned iOS `.ipa` artifact, and publishes the combined update manifest.
 
 ## Important Security Note
 

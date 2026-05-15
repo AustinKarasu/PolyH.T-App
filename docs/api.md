@@ -156,15 +156,17 @@ Admin only. Creates a student login account:
   "semester": 3,
   "rollNo": "CE-042",
   "boardRollNo": "HP-2026-042",
+  "collegeName": "Govt. Polytechnic Kangra",
   "courseName": "Diploma in Computer Engineering",
   "guardianName": "Guardian Name",
   "phone": "9876543210",
   "address": "Kangra, Himachal Pradesh",
-  "admissionYear": 2026
+  "admissionYear": 2026,
+  "dropoutYear": 2029
 }
 ```
 
-The student logs in with `collegeId` and `password` in the Student app.
+The student logs in with `boardRollNo` and `password` in the Student portal.
 
 `GET /students/:id`
 

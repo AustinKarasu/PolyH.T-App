@@ -124,6 +124,31 @@ async function getStudentById(studentId, actingAdminId) {
 async function adminCreateStudent(payload, actingAdminId) {
   const boardRollNo = String(payload.boardRollNo || '').trim();
   if (!boardRollNo) throw new ApiError(422, 'Board roll no is required for student login');
+  const requiredFields = [
+    ['fullName', 'Full name'],
+    ['collegeId', 'College ID'],
+    ['password', 'Password'],
+    ['email', 'Email'],
+    ['dob', 'Date of birth'],
+    ['semester', 'Semester'],
+    ['rollNo', 'Roll no'],
+    ['collegeName', 'College name'],
+    ['courseName', 'Course'],
+    ['guardianName', 'Guardian name'],
+    ['phone', 'Phone'],
+    ['address', 'Address'],
+    ['admissionYear', 'Admission year'],
+    ['dropoutYear', 'Drop out year'],
+    ['branchId', 'Branch']
+  ];
+  const missing = requiredFields
+    .filter(([key]) => payload[key] === undefined || payload[key] === null || String(payload[key]).trim() === '')
+    .map(([, label]) => label);
+  if (missing.length > 0) throw new ApiError(422, `Missing required student fields: ${missing.join(', ')}`);
+  const semester = Number(payload.semester);
+  if (!Number.isInteger(semester) || semester < 1 || semester > 6) {
+    throw new ApiError(422, 'Semester must be from 1 to 6');
+  }
   const passwordHash = await bcrypt.hash(payload.password || passwordFromDob(payload.dob), 12);
   try {
     const rows = await query(
@@ -137,20 +162,20 @@ async function adminCreateStudent(payload, actingAdminId) {
       [
         payload.fullName,
         payload.email || null,
-        boardRollNo,
+        payload.collegeId,
         passwordHash,
         payload.branchId,
-        payload.dob || null,
-        payload.semester || null,
-        payload.rollNo || null,
+        payload.dob,
+        semester,
+        payload.rollNo,
         boardRollNo,
-        payload.collegeName || 'Govt. Polytechnic Kangra',
-        payload.courseName || null,
-        payload.guardianName || null,
-        payload.phone || null,
-        payload.address || null,
-        payload.admissionYear || null,
-        payload.dropoutYear || null,
+        payload.collegeName,
+        payload.courseName,
+        payload.guardianName,
+        payload.phone,
+        payload.address,
+        payload.admissionYear,
+        payload.dropoutYear,
         actingAdminId
       ]
     );
@@ -183,13 +208,6 @@ async function adminUpdateStudent(studentId, patch, actingAdminId) {
   if (patch.boardRollNo !== undefined) {
     const boardRollNo = String(patch.boardRollNo || '').trim();
     if (!boardRollNo) throw new ApiError(422, 'Board roll no is required for student login');
-    const collegeIdIndex = sets.findIndex((set) => set.startsWith('college_id = '));
-    if (collegeIdIndex >= 0) {
-      params[collegeIdIndex] = boardRollNo;
-    } else {
-      sets.push(`college_id = $${idx++}`);
-      params.push(boardRollNo);
-    }
   }
   if (patch.password !== undefined && patch.password !== '') {
     sets.push(`password_hash = $${idx++}`);

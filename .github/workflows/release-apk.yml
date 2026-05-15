@@ -62,9 +62,6 @@ jobs:
           if [ -z "$VERSION_NAME" ]; then VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
           if [ -z "$BUILD_NUMBER" ]; then
             PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_latest.json 2>/dev/null || true)"
-            if [ -z "$PREVIOUS_BUILD" ] || [ "$PREVIOUS_BUILD" = "null" ]; then
-              PREVIOUS_BUILD="$(jq -r '.latestBuild // empty' website/releases/polyht_admin_latest.json 2>/dev/null || true)"
-            fi
             if [ -n "$PREVIOUS_BUILD" ] && [ "$PREVIOUS_BUILD" != "null" ]; then
               BUILD_NUMBER=$((PREVIOUS_BUILD + 1))
             fi

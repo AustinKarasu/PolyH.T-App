@@ -59,31 +59,34 @@ async function approveApplication(applicationId, actingAdminId) {
   if (app.status !== 'pending') throw new ApiError(422, 'Only pending applications can be approved');
 
   try {
-    const created = await query(
-      `INSERT INTO users (
-         full_name, first_name, middle_name, last_name, email, password_hash, role,
-         phone, college_name, state_name, is_active, is_primary_admin
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, 'admin', $7, $8, $9, TRUE, FALSE)
-       RETURNING id`,
-      [
-        app.full_name,
-        app.first_name,
-        app.middle_name,
-        app.last_name,
-        app.email,
-        app.password_hash,
-        app.mobile,
-        app.college_name,
-        app.state_name
-      ]
-    );
-    await query(
-      `UPDATE admin_applications
-       SET status = 'approved', reviewed_by = $1, reviewed_at = CURRENT_TIMESTAMP, created_admin_id = $2
-       WHERE id = $3`,
-      [actingAdminId, created[0].id, applicationId]
-    );
+    const created = await transaction(async (tx) => {
+      const users = await tx(
+        `INSERT INTO users (
+           full_name, first_name, middle_name, last_name, email, password_hash, role,
+           phone, college_name, state_name, is_active, is_primary_admin
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, 'admin', $7, $8, $9, TRUE, FALSE)
+         RETURNING id`,
+        [
+          app.full_name,
+          app.first_name,
+          app.middle_name,
+          app.last_name,
+          app.email,
+          app.password_hash,
+          app.mobile,
+          app.college_name,
+          app.state_name
+        ]
+      );
+      await tx(
+        `UPDATE admin_applications
+         SET status = 'approved', reviewed_by = $1, reviewed_at = CURRENT_TIMESTAMP, created_admin_id = $2
+         WHERE id = $3`,
+        [actingAdminId, users[0].id, applicationId]
+      );
+      return users;
+    });
     const adminRows = await query(
       `SELECT id, full_name, email, is_active, two_factor_enabled, is_primary_admin, created_at
        FROM users WHERE id = $1 LIMIT 1`,

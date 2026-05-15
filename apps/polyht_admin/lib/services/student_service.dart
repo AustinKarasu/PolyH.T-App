@@ -2,13 +2,17 @@ import '../models/app_user.dart';
 import 'api_client.dart';
 
 class StudentService {
-  StudentService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  StudentService({ApiClient? apiClient})
+      : _apiClient = apiClient ?? ApiClient();
   final ApiClient _apiClient;
 
-  Future<List<AppUser>> fetchStudents({int? branchId, String? search, int? limit, int? offset}) async {
+  Future<List<AppUser>> fetchStudents(
+      {int? branchId, String? search, int? limit, int? offset}) async {
     final params = <String>[];
     if (branchId != null) params.add('branchId=$branchId');
-    if (search != null && search.isNotEmpty) params.add('search=${Uri.encodeQueryComponent(search)}');
+    if (search != null && search.isNotEmpty) {
+      params.add('search=${Uri.encodeQueryComponent(search)}');
+    }
     if (limit != null) params.add('limit=$limit');
     if (offset != null) params.add('offset=$offset');
     final query = params.isEmpty ? '' : '?${params.join('&')}';
@@ -39,36 +43,36 @@ class StudentService {
     required String boardRollNo,
     required String dob,
     required int branchId,
-    String? collegeId,
-    String? password,
-    String? email,
-    int? semester,
-    String? rollNo,
-    String? courseName,
-    String? collegeName,
-    String? guardianName,
-    String? phone,
-    String? address,
-    int? admissionYear,
-    int? dropoutYear,
+    required String collegeId,
+    required String password,
+    required String email,
+    required int semester,
+    required String rollNo,
+    required String courseName,
+    required String collegeName,
+    required String guardianName,
+    required String phone,
+    required String address,
+    required int admissionYear,
+    required int dropoutYear,
   }) async {
     final data = await _apiClient.post('/students', {
       'fullName': fullName,
       'boardRollNo': boardRollNo,
       'dob': dob,
       'branchId': branchId,
-      if (collegeId != null && collegeId.isNotEmpty) 'collegeId': collegeId,
-      if (password != null && password.isNotEmpty) 'password': password,
-      if (email != null && email.isNotEmpty) 'email': email,
-      if (semester != null) 'semester': semester,
-      if (rollNo != null && rollNo.isNotEmpty) 'rollNo': rollNo,
-      if (courseName != null && courseName.isNotEmpty) 'courseName': courseName,
-      if (collegeName != null && collegeName.isNotEmpty) 'collegeName': collegeName,
-      if (guardianName != null && guardianName.isNotEmpty) 'guardianName': guardianName,
-      if (phone != null && phone.isNotEmpty) 'phone': phone,
-      if (address != null && address.isNotEmpty) 'address': address,
-      if (admissionYear != null) 'admissionYear': admissionYear,
-      if (dropoutYear != null) 'dropoutYear': dropoutYear,
+      'collegeId': collegeId,
+      'password': password,
+      'email': email,
+      'semester': semester,
+      'rollNo': rollNo,
+      'courseName': courseName,
+      'collegeName': collegeName,
+      'guardianName': guardianName,
+      'phone': phone,
+      'address': address,
+      'admissionYear': admissionYear,
+      'dropoutYear': dropoutYear,
     });
     return AppUser.fromJson(data['student']);
   }
@@ -102,10 +106,13 @@ class StudentService {
       if (semester != null) 'semester': semester,
       if (dob != null && dob.isNotEmpty) 'dob': dob,
       if (rollNo != null && rollNo.isNotEmpty) 'rollNo': rollNo,
-      if (boardRollNo != null && boardRollNo.isNotEmpty) 'boardRollNo': boardRollNo,
+      if (boardRollNo != null && boardRollNo.isNotEmpty)
+        'boardRollNo': boardRollNo,
       if (courseName != null && courseName.isNotEmpty) 'courseName': courseName,
-      if (collegeName != null && collegeName.isNotEmpty) 'collegeName': collegeName,
-      if (guardianName != null && guardianName.isNotEmpty) 'guardianName': guardianName,
+      if (collegeName != null && collegeName.isNotEmpty)
+        'collegeName': collegeName,
+      if (guardianName != null && guardianName.isNotEmpty)
+        'guardianName': guardianName,
       if (phone != null && phone.isNotEmpty) 'phone': phone,
       if (address != null && address.isNotEmpty) 'address': address,
       if (admissionYear != null) 'admissionYear': admissionYear,
