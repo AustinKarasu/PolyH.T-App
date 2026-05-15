@@ -69,11 +69,19 @@ async function registerAdmin(payload) {
   const firstName = String(payload.firstName || '').trim();
   const middleName = String(payload.middleName || '').trim();
   const lastName = String(payload.lastName || '').trim();
+  const mobile = String(payload.mobile || '').trim();
+  const email = String(payload.email || '').trim();
+  const college = String(payload.college || '').trim();
+  const state = String(payload.state || '').trim();
   const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
   if (!firstName || !lastName) throw new ApiError(422, 'First name and last name are required');
+  if (!/^[0-9]{7,20}$/.test(mobile)) throw new ApiError(422, 'Valid mobile number is required');
+  if (!email || !college || !state || !payload.password) {
+    throw new ApiError(422, 'All fields except middle name are required');
+  }
 
   const passwordHash = await bcrypt.hash(payload.password, 12);
-  const existing = await query('SELECT id FROM users WHERE lower(email) = lower($1) LIMIT 1', [payload.email]);
+  const existing = await query('SELECT id FROM users WHERE lower(email) = lower($1) LIMIT 1', [email]);
   if (existing[0]) throw new ApiError(409, 'An admin account with this email already exists');
 
   try {
@@ -102,10 +110,10 @@ async function registerAdmin(payload) {
         middleName || null,
         lastName,
         fullName,
-        payload.mobile,
-        payload.email,
-        payload.college,
-        payload.state,
+        mobile,
+        email,
+        college,
+        state,
         passwordHash
       ]
     );

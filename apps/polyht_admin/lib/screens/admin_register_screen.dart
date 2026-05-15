@@ -23,6 +23,13 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
   String? _college = polytechnicColleges.first;
   String? _state = 'Himachal Pradesh';
   bool _obscurePassword = true;
+  late final TextEditingController _collegeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _collegeController = TextEditingController(text: _college ?? '');
+  }
 
   @override
   void dispose() {
@@ -32,6 +39,7 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
     _mobile.dispose();
     _email.dispose();
     _password.dispose();
+    _collegeController.dispose();
     super.dispose();
   }
 
@@ -71,7 +79,7 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          controller: TextEditingController(text: _college ?? ''),
+                          controller: _collegeController,
                           readOnly: true,
                           decoration: const InputDecoration(
                             labelText: 'College',
@@ -154,7 +162,8 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
         validator: (value) {
           final text = value?.trim() ?? '';
           if (required && text.isEmpty) return 'Required';
-          if (email && text.isNotEmpty && !text.contains('@')) return 'Enter a valid email';
+          if (label == 'Mobile' && !RegExp(r'^[0-9]{7,20}$').hasMatch(text)) return 'Enter 7 to 20 digits';
+          if (email && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return 'Enter a valid email';
           return null;
         },
       ),
@@ -183,7 +192,12 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
       context: context,
       builder: (context) => const _CollegeSearchDialog(),
     );
-    if (selected != null) setState(() => _college = selected);
+    if (selected != null) {
+      setState(() {
+        _college = selected;
+        _collegeController.text = selected;
+      });
+    }
   }
 }
 

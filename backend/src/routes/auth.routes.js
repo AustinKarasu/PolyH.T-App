@@ -26,7 +26,7 @@ router.post(
     body('firstName').trim().isLength({ min: 2, max: 60 }),
     body('middleName').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 60 }),
     body('lastName').trim().isLength({ min: 2, max: 60 }),
-    body('mobile').trim().isLength({ min: 7, max: 20 }),
+    body('mobile').trim().matches(/^[0-9]{7,20}$/).withMessage('Mobile must contain 7 to 20 digits'),
     body('email').isEmail().normalizeEmail(),
     body('college').trim().isLength({ min: 2, max: 200 }),
     body('state').trim().isLength({ min: 2, max: 80 }),

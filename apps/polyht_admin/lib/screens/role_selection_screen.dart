@@ -16,18 +16,21 @@ class RoleSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final adminAuth = context.watch<admin.AuthProvider>();
     final studentAuth = context.watch<student.AuthProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (adminAuth.isAuthenticated) return const DashboardScreen();
     if (studentAuth.isAuthenticated) return const TestListScreen();
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF1F2937), Color(0xFF2563EB), Color(0xFFF8FAFC)],
-            stops: [0, 0.48, 1],
+            colors: isDark
+                ? const [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0F0A1A)]
+                : const [Color(0xFF1F2937), Color(0xFF2563EB), Color(0xFFF8FAFC)],
+            stops: const [0, 0.48, 1],
           ),
         ),
         child: SafeArea(

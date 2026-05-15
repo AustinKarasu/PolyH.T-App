@@ -49,16 +49,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final showTotp = _showTotp || auth.requiresTwoFactor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
     final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6);
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF4C1D95), Color(0xFF7C3AED), Color(0xFFF8F5FF)],
-            stops: [0.0, 0.4, 1.0],
+            colors: isDark
+                ? const [Color(0xFF160B2A), Color(0xFF31205B), Color(0xFF0F0A1A)]
+                : const [Color(0xFF4C1D95), Color(0xFF7C3AED), Color(0xFFF8F5FF)],
+            stops: const [0.0, 0.4, 1.0],
           ),
         ),
         child: SafeArea(
@@ -118,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       Container(
                         constraints: const BoxConstraints(maxWidth: 420),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                           boxShadow: [
                             BoxShadow(
@@ -241,7 +244,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         'Poly H.T',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppTheme.ink.withValues(alpha: 0.4),
+                          color: Colors.white.withValues(alpha: 0.65),
                           letterSpacing: 0.5,
                         ),
                       ),

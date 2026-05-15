@@ -5,6 +5,7 @@ import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/admin_accounts_screen.dart';
+import '../screens/admin_chatbot_screen.dart';
 import '../screens/info_screen.dart';
 import '../screens/security_log_screen.dart';
 import '../screens/settings_screen.dart';
@@ -83,6 +84,14 @@ class AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).pop();
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StudentListScreen()));
+                  },
+                ),
+                _DrawerItem(
+                  icon: Icons.smart_toy_outlined,
+                  label: 'AI Help',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminChatbotScreen()));
                   },
                 ),
                 if (isPrimaryAdmin)
