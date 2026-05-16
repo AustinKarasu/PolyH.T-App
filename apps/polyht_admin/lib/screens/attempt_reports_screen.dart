@@ -5,6 +5,7 @@ import '../config/app_theme.dart';
 import '../models/attempt_report.dart';
 import '../models/test_paper.dart';
 import '../services/excel_bulk_service.dart';
+import '../services/report_pdf_service.dart';
 import '../services/test_service.dart';
 
 class AttemptReportsScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class AttemptReportsScreen extends StatefulWidget {
 class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
   final _testService = TestService();
   final _excelService = ExcelBulkService();
+  final _pdfService = ReportPdfService();
   late Future<List<TestPaper>> _tests;
   late Future<List<AttemptReport>> _reports;
   int? _selectedTestId;
@@ -37,15 +39,42 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
         flexibleSpace: Container(
             decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
         actions: [
-          IconButton(
-            tooltip: 'Download Excel',
-            onPressed: _exporting ? null : _downloadReports,
+          PopupMenuButton<String>(
+            tooltip: 'Download report',
+            enabled: !_exporting,
             icon: _exporting
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.download_rounded),
+            onSelected: (value) {
+              if (value == 'pdf') {
+                _downloadPdfReports();
+              } else {
+                _downloadExcelReports();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'pdf',
+                child: ListTile(
+                  leading: Icon(Icons.picture_as_pdf_rounded),
+                  title: Text('Download PDF'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'excel',
+                child: ListTile(
+                  leading: Icon(Icons.table_chart_rounded),
+                  title: Text('Download Excel'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -66,11 +95,13 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
                   items: [
                     const DropdownMenuItem<int?>(
                         value: null, child: Text('All tests')),
-                    ...tests.map((test) => DropdownMenuItem<int?>(
-                          value: test.id,
-                          child:
-                              Text(test.title, overflow: TextOverflow.ellipsis),
-                        )),
+                    ...tests.map(
+                      (test) => DropdownMenuItem<int?>(
+                        value: test.id,
+                        child:
+                            Text(test.title, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -132,12 +163,13 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
                           style: Theme.of(context).textTheme.titleMedium),
                     ]);
                   }
+                  final groups = _ReportGroup.fromReports(reports);
                   return ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: reports.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemCount: groups.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) =>
-                        _ReportCard(report: reports[index]),
+                        _TestReportSection(group: groups[index]),
                   );
                 },
               ),
@@ -148,7 +180,30 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
     );
   }
 
-  Future<void> _downloadReports() async {
+  Future<void> _downloadPdfReports() async {
+    setState(() => _exporting = true);
+    try {
+      final reports =
+          await _testService.fetchAttemptReports(testId: _selectedTestId);
+      final file = await _pdfService.exportAttemptReports(reports);
+      await _pdfService.open(file);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('PDF report saved to ${file.path}')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<void> _downloadExcelReports() async {
     setState(() => _exporting = true);
     try {
       final reports =
@@ -157,7 +212,7 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
       await _excelService.open(file);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Report saved to ${file.path}')));
+            SnackBar(content: Text('Excel report saved to ${file.path}')));
       }
     } catch (error) {
       if (mounted) {
@@ -172,61 +227,88 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
   }
 }
 
-class _ReportCard extends StatelessWidget {
-  const _ReportCard({required this.report});
+class _TestReportSection extends StatelessWidget {
+  const _TestReportSection({required this.group});
+
+  final _ReportGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final blocked = group.reports
+        .where((report) => report.blockedActions.isNotEmpty)
+        .length;
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      childrenPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.assignment_outlined, color: AppTheme.primary),
+      title: Text(group.title,
+          style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text(
+        '${group.branch} - Semester ${group.semester} - ${group.reports.length} attempted - $blocked blocked',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      children:
+          group.reports.map((report) => _ReportRow(report: report)).toList(),
+    );
+  }
+}
+
+class _ReportRow extends StatelessWidget {
+  const _ReportRow({required this.report});
 
   final AttemptReport report;
 
   @override
   Widget build(BuildContext context) {
-    final blocked = report.blockedActions.isNotEmpty;
-    final color = blocked ? AppTheme.error : AppTheme.success;
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+    final color =
+        report.blockedActions.isNotEmpty ? AppTheme.error : AppTheme.success;
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      leading: Icon(
+        report.blockedActions.isNotEmpty
+            ? Icons.gpp_bad_outlined
+            : Icons.check_circle_outline_rounded,
+        color: color,
       ),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        leading: Icon(
-            blocked ? Icons.gpp_bad_outlined : Icons.verified_user_outlined,
-            color: color),
-        title: Text(report.fullName,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text(
-          '${report.testTitle}\n${report.branchName} - Semester ${report.semester}',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Column(
+      title: Text(report.fullName,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        'Board roll: ${report.boardRollNo ?? '-'} - Time: ${_duration(report.timeTakenSeconds)}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: SizedBox(
+        width: 92,
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(_duration(report.timeTakenSeconds),
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-            Text(report.status, style: TextStyle(fontSize: 11, color: color)),
+            Text(report.status,
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+            Text(_date(report.completedAt),
+                textAlign: TextAlign.end, style: const TextStyle(fontSize: 10)),
           ],
         ),
-        children: [
-          _SummaryBox(text: report.aiSummary),
-          const SizedBox(height: 12),
-          _InfoWrap(rows: [
-            _Info('Board roll no', report.boardRollNo ?? '-'),
-            _Info('Roll no', report.rollNo ?? '-'),
-            _Info('Mobile no', report.phone ?? '-'),
-            _Info('Email', report.email ?? '-'),
-            _Info('Course', report.courseName ?? '-'),
-            _Info('College', report.collegeName ?? '-'),
-            _Info('College ID', report.collegeId ?? '-'),
-            _Info('Started', _date(report.startedAt)),
-            _Info('Submitted', _date(report.completedAt)),
-            _Info('Blocked actions', _blockedActions(report)),
-          ]),
-        ],
       ),
+      children: [
+        _SummaryBox(text: report.aiSummary),
+        const SizedBox(height: 12),
+        _InfoWrap(rows: [
+          _Info('Board roll no', report.boardRollNo ?? '-'),
+          _Info('Roll no', report.rollNo ?? '-'),
+          _Info('Mobile no', report.phone ?? '-'),
+          _Info('Email', report.email ?? '-'),
+          _Info('Course', report.courseName ?? '-'),
+          _Info('College', report.collegeName ?? '-'),
+          _Info('College ID', report.collegeId ?? '-'),
+          _Info('Started', _dateTime(report.startedAt)),
+          _Info('Submitted', _dateTime(report.completedAt)),
+          _Info('Blocked actions', _blockedActions(report)),
+        ]),
+      ],
     );
   }
 
@@ -240,9 +322,14 @@ class _ReportCard extends StatelessWidget {
     return '${secs}s';
   }
 
-  static String _date(DateTime? date) {
+  static String _dateTime(DateTime? date) {
     if (date == null) return '-';
     return DateFormat('dd MMM yyyy, hh:mm a').format(date.toLocal());
+  }
+
+  static String _date(DateTime? date) {
+    if (date == null) return '-';
+    return DateFormat('dd MMM').format(date.toLocal());
   }
 
   static String _blockedActions(AttemptReport report) {
@@ -334,4 +421,39 @@ class _Info {
 
   final String label;
   final String value;
+}
+
+class _ReportGroup {
+  const _ReportGroup({
+    required this.title,
+    required this.branch,
+    required this.semester,
+    required this.reports,
+  });
+
+  final String title;
+  final String branch;
+  final int semester;
+  final List<AttemptReport> reports;
+
+  static List<_ReportGroup> fromReports(List<AttemptReport> reports) {
+    final grouped = <int, List<AttemptReport>>{};
+    for (final report in reports) {
+      grouped.putIfAbsent(report.testId, () => []).add(report);
+    }
+    final groups = grouped.values.map((items) {
+      items.sort((a, b) =>
+          a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
+      final first = items.first;
+      return _ReportGroup(
+        title: first.testTitle,
+        branch: first.branchName,
+        semester: first.semester,
+        reports: items,
+      );
+    }).toList();
+    groups
+        .sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    return groups;
+  }
 }

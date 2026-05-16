@@ -1,10 +1,10 @@
 {
   "appId": "polyht",
-  "latestVersion": "1.0.50",
-  "latestBuild": 51,
+  "latestVersion": "1.0.51",
+  "latestBuild": 52,
   "mandatory": true,
-  "releaseNotes": "Required update:\n- Fixes AI Reports loading by falling back to existing logs when the rich report endpoint is unavailable.\n- Fixes scheduled-test notification times for India/local time, so 11:34 AM no longer appears as UTC time.\n- Keeps secure exam heartbeat and lock protection for live tests.\n- Keeps Play Store update prompts with APK fallback for direct installs.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.50/polyht-v1.0.50+51.apk",
+  "releaseNotes": "Required update:\n- Shows AI Reports as a clean per-test list with student attempts under each test.\n- Adds professional PDF report download with PolyHT heading, summary counts, test details, timing, student details, and blocked actions.\n- Keeps Excel export available from the download menu.\n- Keeps secure exam heartbeat, report fallback, and India/local notification time fixes.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.51/polyht-v1.0.51+52.apk",
   "packageName": "in.polyht.polyht_admin",
   "usePlayStore": true,
   "playStoreUrl": "https://play.google.com/store/apps/details?id=in.polyht.polyht_admin"
