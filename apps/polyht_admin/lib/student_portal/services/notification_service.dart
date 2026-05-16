@@ -12,7 +12,8 @@ class NotificationService {
 
   static final instance = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   bool _ready = false;
 
   Future<void> init() async {
@@ -26,9 +27,11 @@ class NotificationService {
         requestBadgePermission: true,
         requestSoundPermission: true,
       );
-      await _plugin.initialize(const InitializationSettings(android: android, iOS: ios));
+      await _plugin
+          .initialize(const InitializationSettings(android: android, iOS: ios));
       if (Platform.isAndroid) {
-        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
         await androidPlugin?.requestNotificationsPermission();
         try {
           await androidPlugin?.requestExactAlarmsPermission();
@@ -44,18 +47,45 @@ class NotificationService {
     await init();
     if (!_ready) return;
     final prefs = await SharedPreferences.getInstance();
-    final seen = prefs.getStringList('notified_test_ids')?.toSet() ?? <String>{};
+    final seen =
+        prefs.getStringList('notified_test_ids')?.toSet() ?? <String>{};
+    final now = DateTime.now();
     for (final test in tests) {
       try {
         await _cancelTest(test.id);
         if (test.status == 'ended') continue;
-        if (test.status == 'upcoming' && !seen.contains('${test.id}')) {
+        final scheduledKey =
+            '${test.id}:scheduled:${test.scheduledStart.millisecondsSinceEpoch}';
+        final liveKey =
+            '${test.id}:live:${test.scheduledStart.millisecondsSinceEpoch}';
+        final upcomingKey =
+            '${test.id}:upcoming:${test.scheduledStart.millisecondsSinceEpoch}';
+        if (test.status == 'upcoming' && !seen.contains(scheduledKey)) {
           await _showNow(
             id: _id(test.id, 4),
             title: 'House test scheduled',
-            body: '${test.title} is scheduled for ${_time(test.scheduledStart)}.',
+            body:
+                '${test.title} is scheduled for ${_time(test.scheduledStart)}.',
           );
-          seen.add('${test.id}');
+          seen.add(scheduledKey);
+        }
+        if (test.status == 'live' && !seen.contains(liveKey)) {
+          await _showNow(
+            id: _id(test.id, 2),
+            title: 'House test started',
+            body: '${test.title} is available now.',
+          );
+          seen.add(liveKey);
+        }
+        if (test.status == 'upcoming' &&
+            !seen.contains(upcomingKey) &&
+            test.scheduledStart.difference(now) <= const Duration(minutes: 2)) {
+          await _showNow(
+            id: _id(test.id, 1),
+            title: 'Upcoming house test',
+            body: '${test.title} starts at ${_time(test.scheduledStart)}.',
+          );
+          seen.add(upcomingKey);
         }
         await _schedule(
           id: _id(test.id, 1),
@@ -85,6 +115,7 @@ class NotificationService {
       await _plugin.cancel(_id(testId, 1));
       await _plugin.cancel(_id(testId, 2));
       await _plugin.cancel(_id(testId, 3));
+      await _plugin.cancel(_id(testId, 4));
     } catch (_) {}
   }
 
@@ -95,7 +126,10 @@ class NotificationService {
     required String body,
   }) async {
     final now = DateTime.now();
-    if (!when.isAfter(now.add(const Duration(seconds: 5)))) return;
+    if (!when.isAfter(now.add(const Duration(seconds: 10)))) {
+      await _showNow(id: id, title: title, body: body);
+      return;
+    }
     final scheduledTime = tz.TZDateTime.from(when, tz.local);
     try {
       await _plugin.zonedSchedule(
@@ -105,7 +139,8 @@ class NotificationService {
         scheduledTime,
         _notificationDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (_) {
       await _plugin.zonedSchedule(
@@ -115,7 +150,8 @@ class NotificationService {
         scheduledTime,
         _notificationDetails(),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
     }
   }
@@ -142,6 +178,9 @@ class NotificationService {
         category: AndroidNotificationCategory.alarm,
         importance: Importance.max,
         priority: Priority.max,
+        visibility: NotificationVisibility.public,
+        playSound: true,
+        enableVibration: true,
       ),
       iOS: DarwinNotificationDetails(
         interruptionLevel: InterruptionLevel.timeSensitive,
@@ -151,14 +190,15 @@ class NotificationService {
 
   DateTime _upcomingTime(DateTime start) {
     final reminder = start.subtract(const Duration(minutes: 15));
-    final soon = DateTime.now().add(const Duration(minutes: 1));
+    final soon = DateTime.now().add(const Duration(seconds: 10));
     return reminder.isAfter(soon) ? reminder : soon;
   }
 
   int _id(int testId, int kind) => testId * 10 + kind;
 
   String _time(DateTime value) {
-    final hour = value.hour > 12 ? value.hour - 12 : (value.hour == 0 ? 12 : value.hour);
+    final hour =
+        value.hour > 12 ? value.hour - 12 : (value.hour == 0 ? 12 : value.hour);
     final minute = value.minute.toString().padLeft(2, '0');
     final suffix = value.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $suffix';

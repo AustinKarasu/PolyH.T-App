@@ -35,9 +35,11 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   int _totalPages = 0;
   late DateTime _startedAt;
   Timer? _timer;
+  Timer? _heartbeatTimer;
   int _elapsedSeconds = 0;
   bool _completedByTimer = false;
   bool _leavingExam = false;
+  bool _heartbeatInFlight = false;
 
   @override
   void initState() {
@@ -57,6 +59,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     _timer?.cancel();
+    _heartbeatTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     if (!widget.reviewOnly) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -68,13 +71,24 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
-        setState(() => _elapsedSeconds = DateTime.now().difference(_startedAt).inSeconds);
-        if (!_locked && !_completedByTimer && _elapsedSeconds >= widget.test.timeLimitMinutes * 60) {
+        setState(() =>
+            _elapsedSeconds = DateTime.now().difference(_startedAt).inSeconds);
+        if (!_locked &&
+            !_completedByTimer &&
+            _elapsedSeconds >= widget.test.timeLimitMinutes * 60) {
           _completedByTimer = true;
           unawaited(_complete(autoSubmitted: true));
         }
       }
     });
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      unawaited(_sendHeartbeat());
+    });
+    unawaited(_sendHeartbeat());
   }
 
   String get _formattedTime {
@@ -83,7 +97,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     return '$m:$s';
   }
 
-  int get _remainingMinutes => widget.test.timeLimitMinutes - (_elapsedSeconds ~/ 60);
+  int get _remainingMinutes =>
+      widget.test.timeLimitMinutes - (_elapsedSeconds ~/ 60);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -130,7 +145,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: _locked
-                  ? const LinearGradient(colors: [Color(0xFFDC2626), Color(0xFFB91C1C)])
+                  ? const LinearGradient(
+                      colors: [Color(0xFFDC2626), Color(0xFFB91C1C)])
                   : AppTheme.headerGradient,
             ),
           ),
@@ -139,14 +155,18 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
             children: [
               Text(
                 widget.test.title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               if (!_loading && !_locked)
                 Text(
-                  _totalPages > 0 ? 'Page ${_currentPage + 1} of $_totalPages' : '',
-                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                  _totalPages > 0
+                      ? 'Page ${_currentPage + 1} of $_totalPages'
+                      : '',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
                 ),
             ],
           ),
@@ -155,7 +175,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
             if (!widget.reviewOnly && !_loading && !_locked)
               Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _remainingMinutes <= 5
                       ? Colors.red.withValues(alpha: 0.3)
@@ -168,7 +189,9 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                     Icon(
                       Icons.timer_outlined,
                       size: 16,
-                      color: _remainingMinutes <= 5 ? Colors.yellow : Colors.white70,
+                      color: _remainingMinutes <= 5
+                          ? Colors.yellow
+                          : Colors.white70,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -176,7 +199,9 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _remainingMinutes <= 5 ? Colors.yellow : Colors.white,
+                        color: _remainingMinutes <= 5
+                            ? Colors.yellow
+                            : Colors.white,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -187,8 +212,11 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
             if (!widget.reviewOnly)
               TextButton.icon(
                 onPressed: _locked ? null : _confirmComplete,
-                icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-                label: const Text('Submit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.check_circle_outline,
+                    color: Colors.white, size: 20),
+                label: const Text('Submit',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -199,15 +227,20 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
             if (!widget.reviewOnly && _hasFocusWarning)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                color: _locked ? AppTheme.error.withValues(alpha: 0.1) : AppTheme.accent.withValues(alpha: 0.1),
+                color: _locked
+                    ? AppTheme.error.withValues(alpha: 0.1)
+                    : AppTheme.accent.withValues(alpha: 0.1),
                 child: Material(
                   color: Colors.transparent,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     child: Row(
                       children: [
                         Icon(
-                          _locked ? Icons.lock_rounded : Icons.warning_amber_rounded,
+                          _locked
+                              ? Icons.lock_rounded
+                              : Icons.warning_amber_rounded,
                           size: 20,
                           color: _locked ? AppTheme.error : AppTheme.accent,
                         ),
@@ -227,7 +260,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                         if (!_locked)
                           IconButton(
                             icon: const Icon(Icons.close, size: 18),
-                            onPressed: () => setState(() => _hasFocusWarning = false),
+                            onPressed: () =>
+                                setState(() => _hasFocusWarning = false),
                           ),
                       ],
                     ),
@@ -242,11 +276,13 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircularProgressIndicator(color: AppTheme.primary),
+                          const CircularProgressIndicator(
+                              color: AppTheme.primary),
                           const SizedBox(height: 16),
                           Text(
                             'Loading question paper…',
-                            style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.5)),
+                            style: TextStyle(
+                                color: AppTheme.ink.withValues(alpha: 0.5)),
                           ),
                         ],
                       ),
@@ -262,21 +298,27 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                                   width: 80,
                                   height: 80,
                                   decoration: BoxDecoration(
-                                    color: AppTheme.error.withValues(alpha: 0.08),
+                                    color:
+                                        AppTheme.error.withValues(alpha: 0.08),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.lock_rounded, size: 40, color: AppTheme.error),
+                                  child: const Icon(Icons.lock_rounded,
+                                      size: 40, color: AppTheme.error),
                                 ),
                                 const SizedBox(height: 20),
                                 const Text(
                                   'Paper Locked',
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Admin permission is required to reopen this test. Contact your invigilator.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.5)),
+                                  style: TextStyle(
+                                      color:
+                                          AppTheme.ink.withValues(alpha: 0.5)),
                                 ),
                               ],
                             ),
@@ -289,18 +331,24 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.picture_as_pdf_outlined, size: 56, color: AppTheme.error),
+                                    const Icon(Icons.picture_as_pdf_outlined,
+                                        size: 56, color: AppTheme.error),
                                     const SizedBox(height: 12),
                                     Text(
                                       _errorMessage ?? 'Unable to open PDF.',
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(color: AppTheme.ink.withValues(alpha: 0.65)),
+                                      style: TextStyle(
+                                          color: AppTheme.ink
+                                              .withValues(alpha: 0.65)),
                                     ),
                                     if (_pdfPath != null) ...[
                                       const SizedBox(height: 16),
                                       FilledButton.icon(
-                                        onPressed: () => OpenFilex.open(_pdfPath!, type: 'application/pdf'),
-                                        icon: const Icon(Icons.open_in_new_rounded),
+                                        onPressed: () => OpenFilex.open(
+                                            _pdfPath!,
+                                            type: 'application/pdf'),
+                                        icon: const Icon(
+                                            Icons.open_in_new_rounded),
                                         label: const Text('Open with PDF app'),
                                       ),
                                     ],
@@ -314,15 +362,19 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                               swipeHorizontal: false,
                               autoSpacing: true,
                               pageFling: true,
-                              onRender: (pages) => setState(() => _totalPages = pages ?? 0),
-                              onPageChanged: (page, _) => setState(() => _currentPage = page ?? 0),
+                              onRender: (pages) =>
+                                  setState(() => _totalPages = pages ?? 0),
+                              onPageChanged: (page, _) =>
+                                  setState(() => _currentPage = page ?? 0),
                               onError: (error) => setState(() {
                                 _pdfViewerFailed = true;
-                                _errorMessage = 'Unable to display this PDF. Please ask the admin to re-upload it.';
+                                _errorMessage =
+                                    'Unable to display this PDF. Please ask the admin to re-upload it.';
                               }),
                               onPageError: (_, error) => setState(() {
                                 _pdfViewerFailed = true;
-                                _errorMessage = 'Unable to display this PDF page. Please ask the admin to re-upload it.';
+                                _errorMessage =
+                                    'Unable to display this PDF page. Please ask the admin to re-upload it.';
                               }),
                             ),
             ),
@@ -336,6 +388,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     try {
       await _securityService.enterExamMode();
       await _testService.startAttempt(widget.test.id);
+      _startHeartbeat();
       if (await _securityService.isInMultiWindowMode()) {
         await _logEvent('split_screen_detected');
       }
@@ -361,7 +414,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Unable to load the question paper. Please check your connection and try again.';
+          _errorMessage =
+              'Unable to load the question paper. Please check your connection and try again.';
           _loading = false;
         });
       }
@@ -414,6 +468,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   Future<void> _complete({bool autoSubmitted = false}) async {
     if (_locked) return;
     try {
+      _heartbeatTimer?.cancel();
       if (autoSubmitted) {
         try {
           await _testService.recordEvent(widget.test.id, 'time_limit_reached');
@@ -425,26 +480,31 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
       await _securityService.exitExamMode();
       if (mounted) {
         if (autoSubmitted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Time limit reached. Test submitted.')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Time limit reached. Test submitted.')));
         }
         Navigator.of(context).pop();
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to submit. Please try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Unable to submit. Please try again.')));
       }
     }
   }
 
   Future<void> _logEvent(String eventType) async {
     try {
-      final locked = await _testService.recordEvent(widget.test.id, eventType);
+      final locked = await _testService.recordEvent(widget.test.id, eventType,
+          metadata: _eventMetadata());
       if (locked && mounted) {
         await _deleteLocalPdf();
+        _heartbeatTimer?.cancel();
         setState(() {
           _locked = true;
           _hasFocusWarning = true;
@@ -452,6 +512,33 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _sendHeartbeat() async {
+    if (widget.reviewOnly || _locked || _leavingExam || _heartbeatInFlight) {
+      return;
+    }
+    _heartbeatInFlight = true;
+    try {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      await _securityService.reassertExamMode();
+      if (await _securityService.isInMultiWindowMode()) {
+        await _logEvent('split_screen_detected');
+      } else {
+        await _logEvent('exam_heartbeat');
+      }
+    } finally {
+      _heartbeatInFlight = false;
+    }
+  }
+
+  Map<String, dynamic> _eventMetadata() {
+    return {
+      'elapsedSeconds': _elapsedSeconds,
+      'currentPage': _currentPage + 1,
+      'totalPages': _totalPages,
+      'loaded': !_loading,
+    };
   }
 
   Future<void> _deleteLocalPdf() async {
@@ -464,6 +551,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
 
   bool _looksLikeLockedAttempt(String message) {
     final lower = message.toLowerCase();
-    return lower.contains('locked') || lower.contains('blocked') || lower.contains('admin permission');
+    return lower.contains('locked') ||
+        lower.contains('blocked') ||
+        lower.contains('admin permission');
   }
 }

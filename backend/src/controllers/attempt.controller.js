@@ -56,6 +56,15 @@ async function listLocked(req, res, next) {
   }
 }
 
+async function listReports(req, res, next) {
+  try {
+    const reports = await attemptService.listAttemptReports(req.query, req.user);
+    res.json({ reports });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function allowAttempt(req, res, next) {
   try {
     await attemptService.allowAttempt(Number(req.params.attemptId), req.user, requestContext(req));
@@ -78,5 +87,6 @@ module.exports = {
   recordEvent,
   listEvents,
   listLocked,
+  listReports,
   allowAttempt
 };

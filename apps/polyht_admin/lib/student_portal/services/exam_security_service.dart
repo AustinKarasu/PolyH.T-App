@@ -9,6 +9,13 @@ class ExamSecurityService {
       if (call.method == 'multiWindowModeChanged' && call.arguments == true) {
         await handler('split_screen_detected');
       }
+      if (call.method == 'pictureInPictureModeChanged' &&
+          call.arguments == true) {
+        await handler('picture_in_picture_detected');
+      }
+      if (call.method == 'windowFocusChanged' && call.arguments == false) {
+        await handler('window_focus_lost');
+      }
     });
   }
 
@@ -17,13 +24,20 @@ class ExamSecurityService {
     await _channel.invokeMethod('enterExamMode').catchError((_) {});
   }
 
+  Future<void> reassertExamMode() async {
+    await WakelockPlus.enable();
+    await _channel.invokeMethod('reassertExamMode').catchError((_) {});
+  }
+
   Future<void> exitExamMode() async {
     await WakelockPlus.disable();
     await _channel.invokeMethod('exitExamMode').catchError((_) {});
   }
 
   Future<bool> isInMultiWindowMode() async {
-    final result = await _channel.invokeMethod<bool>('isInMultiWindowMode').catchError((_) => false);
+    final result = await _channel
+        .invokeMethod<bool>('isInMultiWindowMode')
+        .catchError((_) => false);
     return result ?? false;
   }
 }

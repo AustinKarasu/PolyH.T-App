@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/admin_accounts_screen.dart';
 import '../screens/admin_chatbot_screen.dart';
+import '../screens/attempt_reports_screen.dart';
 import '../screens/info_screen.dart';
 import '../screens/security_log_screen.dart';
 import '../screens/settings_screen.dart';
@@ -20,7 +21,9 @@ class AppDrawer extends StatelessWidget {
     final theme = context.watch<ThemeProvider>();
     final user = auth.user;
     final isPrimaryAdmin = user?.isPrimaryAdmin == true;
-    final collegeName = user?.collegeName?.trim().isNotEmpty == true ? user!.collegeName! : 'Poly H.T';
+    final collegeName = user?.collegeName?.trim().isNotEmpty == true
+        ? user!.collegeName!
+        : 'Poly H.T';
 
     return Drawer(
       child: Column(
@@ -28,7 +31,11 @@ class AppDrawer extends StatelessWidget {
           // ── Header ──
           Container(
             width: double.infinity,
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, left: 20, right: 20, bottom: 20),
+            padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 16,
+                left: 20,
+                right: 20,
+                bottom: 20),
             decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,7 +44,8 @@ class AppDrawer extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.asset('assets/images/polyht_logo.png', width: 52, height: 52, fit: BoxFit.cover),
+                      child: Image.asset('assets/images/polyht_logo.png',
+                          width: 52, height: 52, fit: BoxFit.cover),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -45,7 +53,11 @@ class AppDrawer extends StatelessWidget {
                         collegeName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.2),
                       ),
                     ),
                   ],
@@ -53,21 +65,31 @@ class AppDrawer extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   user?.fullName ?? 'Admin',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white),
                 ),
                 if (user?.email != null)
                   Text(
                     user!.email!,
-                    style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.75)),
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.75)),
                   ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text('Administrator', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                  child: const Text('Administrator',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white)),
                 ),
               ],
             ),
@@ -83,7 +105,8 @@ class AppDrawer extends StatelessWidget {
                   label: 'Student Directory',
                   onTap: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StudentListScreen()));
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const StudentListScreen()));
                   },
                 ),
                 _DrawerItem(
@@ -91,7 +114,17 @@ class AppDrawer extends StatelessWidget {
                   label: 'AI Help',
                   onTap: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminChatbotScreen()));
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const AdminChatbotScreen()));
+                  },
+                ),
+                _DrawerItem(
+                  icon: Icons.description_outlined,
+                  label: 'AI Reports',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const AttemptReportsScreen()));
                   },
                 ),
                 if (isPrimaryAdmin)
@@ -100,7 +133,8 @@ class AppDrawer extends StatelessWidget {
                     label: 'Admin Accounts',
                     onTap: () {
                       Navigator.of(context).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminAccountsScreen()));
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const AdminAccountsScreen()));
                     },
                   ),
                 if (isPrimaryAdmin)
@@ -109,7 +143,8 @@ class AppDrawer extends StatelessWidget {
                     label: 'Exam Security Logs',
                     onTap: () {
                       Navigator.of(context).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SecurityLogScreen()));
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const SecurityLogScreen()));
                     },
                   ),
                 _DrawerItem(
@@ -117,7 +152,8 @@ class AppDrawer extends StatelessWidget {
                   label: 'Settings',
                   onTap: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const SettingsScreen()));
                   },
                 ),
                 _DrawerItem(
@@ -125,14 +161,20 @@ class AppDrawer extends StatelessWidget {
                   label: 'App Info',
                   onTap: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InfoScreen()));
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const InfoScreen()));
                   },
                 ),
                 const Divider(height: 24),
                 SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  secondary: Icon(theme.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: AppTheme.primary),
-                  title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500)),
+                  secondary: Icon(
+                      theme.isDark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      color: AppTheme.primary),
+                  title: const Text('Dark Mode',
+                      style: TextStyle(fontWeight: FontWeight.w500)),
                   value: theme.isDark,
                   activeThumbColor: AppTheme.primary,
                   onChanged: (_) => theme.toggle(),
@@ -156,7 +198,13 @@ class AppDrawer extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Text(
               'Poly H.T v1.0.0',
-              style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.4)),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.color
+                      ?.withValues(alpha: 0.4)),
             ),
           ),
         ],
@@ -166,7 +214,11 @@ class AppDrawer extends StatelessWidget {
 }
 
 class _DrawerItem extends StatelessWidget {
-  const _DrawerItem({required this.icon, required this.label, required this.onTap, this.color});
+  const _DrawerItem(
+      {required this.icon,
+      required this.label,
+      required this.onTap,
+      this.color});
 
   final IconData icon;
   final String label;
@@ -178,7 +230,8 @@ class _DrawerItem extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       leading: Icon(icon, color: color ?? AppTheme.primary),
-      title: Text(label, style: TextStyle(fontWeight: FontWeight.w500, color: color)),
+      title: Text(label,
+          style: TextStyle(fontWeight: FontWeight.w500, color: color)),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );

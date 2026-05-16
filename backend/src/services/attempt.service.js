@@ -1,7 +1,15 @@
 const { query } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 
-const criticalEvents = new Set(['app_backgrounded', 'app_detached', 'app_hidden', 'back_blocked', 'split_screen_detected']);
+const criticalEvents = new Set([
+  'app_backgrounded',
+  'app_detached',
+  'app_hidden',
+  'back_blocked',
+  'split_screen_detected',
+  'picture_in_picture_detected',
+  'window_focus_lost'
+]);
 const warningEvents = new Set(['app_inactive', 'app_resumed', 'time_limit_reached']);
 
 async function startAttempt(testId, user, context = {}) {
@@ -69,6 +77,15 @@ async function recordStudentEvent(testId, user, eventType, metadata = {}, contex
   let message = metadata.message || `Student event: ${eventType}`;
   let severity = warningEvents.has(eventType) ? 'warning' : 'info';
 
+  if (attempt.status === 'blocked') {
+    await query('UPDATE test_attempts SET last_seen_at = CURRENT_TIMESTAMP WHERE id = $1', [attempt.id]);
+    await recordEvent({
+      attemptId: attempt.id, testId, studentId: user.sub, branchId: attempt.branch_id,
+      eventType, severity: 'warning', message: message || 'Blocked attempt continued to report activity.', metadata, context
+    });
+    return { locked: true };
+  }
+
   if (criticalEvents.has(eventType)) {
     severity = 'critical';
     message = metadata.message || 'Student left or attempted to leave secure exam mode.';
@@ -76,14 +93,26 @@ async function recordStudentEvent(testId, user, eventType, metadata = {}, contex
     severity = warningEvents.has(eventType) ? 'warning' : 'info';
   }
 
-  await query('UPDATE test_attempts SET last_seen_at = CURRENT_TIMESTAMP WHERE id = $1', [attempt.id]);
+  if (criticalEvents.has(eventType)) {
+    await query(
+      `UPDATE test_attempts
+       SET last_seen_at = CURRENT_TIMESTAMP,
+           status = 'blocked',
+           blocked_reason = $1,
+           blocked_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [message, attempt.id]
+    );
+  } else {
+    await query('UPDATE test_attempts SET last_seen_at = CURRENT_TIMESTAMP WHERE id = $1', [attempt.id]);
+  }
 
   await recordEvent({
     attemptId: attempt.id, testId, studentId: user.sub, branchId: attempt.branch_id,
     eventType, severity, message, metadata, context
   });
 
-  return { locked: false };
+  return { locked: criticalEvents.has(eventType) };
 }
 
 async function recordEvent({ attemptId, testId, studentId, branchId, eventType, severity = 'info', message = null, metadata = null, context = {} }) {
@@ -168,6 +197,106 @@ async function listLockedAttempts(filters = {}, adminUser) {
      ORDER BY a.blocked_at DESC`,
     params
   );
+}
+
+async function listAttemptReports(filters = {}, adminUser) {
+  const conditions = [];
+  const params = [];
+  let idx = 1;
+
+  if (adminUser?.sub && !(await isPrimaryAdmin(adminUser.sub))) {
+    conditions.push(`t.created_by = $${idx++}`);
+    params.push(adminUser.sub);
+  }
+  if (filters.testId) {
+    conditions.push(`a.test_id = $${idx++}`);
+    params.push(filters.testId);
+  }
+  if (filters.studentId) {
+    conditions.push(`a.student_id = $${idx++}`);
+    params.push(filters.studentId);
+  }
+  if (filters.branchId) {
+    conditions.push(`t.branch_id = $${idx++}`);
+    params.push(filters.branchId);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limit = Math.min(Number(filters.limit || 500), 1000);
+  const criticalTypes = Array.from(criticalEvents);
+
+  const reports = await query(
+    `SELECT a.id AS attempt_id, a.status, a.started_at, a.last_seen_at, a.completed_at,
+            a.blocked_at, a.blocked_reason,
+            CASE
+              WHEN a.started_at IS NOT NULL AND a.completed_at IS NOT NULL
+                THEN EXTRACT(EPOCH FROM (a.completed_at - a.started_at))::INT
+              WHEN a.started_at IS NOT NULL AND a.last_seen_at IS NOT NULL
+                THEN EXTRACT(EPOCH FROM (a.last_seen_at - a.started_at))::INT
+              ELSE NULL
+            END AS time_taken_seconds,
+            t.id AS test_id, t.title AS test_title, t.time_limit_minutes,
+            t.scheduled_start, t.scheduled_end,
+            u.id AS student_id, u.full_name, u.college_id, u.email, u.phone,
+            u.board_roll_no, u.roll_no, u.college_name, u.course_name,
+            u.guardian_name, u.semester, u.admission_year, u.dropout_year,
+            b.name AS branch_name, b.code AS branch_code,
+            COALESCE(
+              JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'event_type', e.event_type,
+                  'severity', e.severity,
+                  'message', e.message,
+                  'metadata', e.metadata,
+                  'created_at', e.created_at
+                )
+                ORDER BY e.created_at ASC
+              ) FILTER (WHERE e.id IS NOT NULL),
+              '[]'::json
+            ) AS events,
+            COALESCE(
+              JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'event_type', e.event_type,
+                  'message', e.message,
+                  'created_at', e.created_at
+                )
+                ORDER BY e.created_at ASC
+              ) FILTER (WHERE e.event_type = ANY($${idx}::text[])),
+              '[]'::json
+            ) AS blocked_actions
+     FROM test_attempts a
+     JOIN tests t ON t.id = a.test_id
+     JOIN users u ON u.id = a.student_id
+     JOIN branches b ON b.id = t.branch_id
+     LEFT JOIN exam_events e ON e.attempt_id = a.id
+     ${where}
+     GROUP BY a.id, t.id, u.id, b.id
+     ORDER BY COALESCE(a.completed_at, a.last_seen_at, a.started_at) DESC
+     LIMIT $${idx + 1}`,
+    [...params, criticalTypes, limit]
+  );
+
+  return reports.map((report) => ({
+    ...report,
+    ai_summary: buildReportSummary(report)
+  }));
+}
+
+function buildReportSummary(report) {
+  const blocked = Array.isArray(report.blocked_actions) ? report.blocked_actions : [];
+  const minutes = report.time_taken_seconds == null
+    ? 'not available'
+    : `${Math.max(1, Math.round(Number(report.time_taken_seconds) / 60))} minute(s)`;
+  if (blocked.length > 0) {
+    const actions = [...new Set(blocked.map((event) => readableEvent(event.event_type)))].join(', ');
+    return `${report.full_name} attempted ${report.test_title}, spent ${minutes}, and triggered blocked action(s): ${actions}.`;
+  }
+  return `${report.full_name} attempted ${report.test_title} and spent ${minutes} with no blocked actions recorded.`;
+}
+
+function readableEvent(eventType) {
+  return String(eventType || '').replace(/_/g, ' ');
 }
 
 async function allowAttempt(attemptId, adminUser, context = {}) {
@@ -284,6 +413,7 @@ module.exports = {
   recordEvent,
   listEvents,
   listLockedAttempts,
+  listAttemptReports,
   allowAttempt,
   assertLivePdfAccess,
   assertCompletedPdfAccess,

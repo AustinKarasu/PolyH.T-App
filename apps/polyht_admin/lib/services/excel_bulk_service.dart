@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/admin_account.dart';
 import '../models/app_user.dart';
+import '../models/attempt_report.dart';
 import '../models/branch.dart';
 import 'admin_service.dart';
 import 'student_service.dart';
@@ -284,7 +285,80 @@ class ExcelBulkService {
     return _save(excel, 'polyht_admins');
   }
 
+  Future<File> exportAttemptReports(List<AttemptReport> reports) async {
+    final excel = Excel.createExcel();
+    final sheet = _sheet(excel, 'Attempt Reports');
+    sheet.appendRow(_cells([
+      'Name',
+      'Board roll no',
+      'Roll no',
+      'Test',
+      'Status',
+      'Time taken',
+      'Submitted on',
+      'Test started on',
+      'Blocked actions',
+      'Branch',
+      'Semester',
+      'Mobile no',
+      'Course',
+      'Email',
+      'College',
+      'College ID',
+      'Guardian',
+      'AI report',
+    ]));
+    for (final report in reports) {
+      sheet.appendRow(_cells([
+        report.fullName,
+        report.boardRollNo ?? '',
+        report.rollNo ?? '',
+        report.testTitle,
+        report.status,
+        _duration(report.timeTakenSeconds),
+        _dateText(report.completedAt),
+        _dateText(report.startedAt),
+        _blockedActions(report),
+        report.branchCode == null
+            ? report.branchName
+            : '${report.branchName} (${report.branchCode})',
+        report.semester.toString(),
+        report.phone ?? '',
+        report.courseName ?? '',
+        report.email ?? '',
+        report.collegeName ?? '',
+        report.collegeId ?? '',
+        report.guardianName ?? '',
+        report.aiSummary,
+      ]));
+    }
+    return _save(excel, 'polyht_attempt_reports');
+  }
+
   Future<void> open(File file) => OpenFilex.open(file.path);
+
+  String _duration(int? seconds) {
+    if (seconds == null) return '';
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    if (hours > 0) return '${hours}h ${minutes}m ${secs}s';
+    if (minutes > 0) return '${minutes}m ${secs}s';
+    return '${secs}s';
+  }
+
+  String _dateText(DateTime? date) {
+    if (date == null) return '';
+    return date.toLocal().toString().split('.').first;
+  }
+
+  String _blockedActions(AttemptReport report) {
+    if (report.blockedActions.isEmpty) return 'None';
+    return report.blockedActions
+        .map((event) => event.eventType.replaceAll('_', ' '))
+        .toSet()
+        .join(', ');
+  }
 
   Sheet _sheet(Excel excel, String name) {
     final sheet = excel[name];

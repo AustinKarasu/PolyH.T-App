@@ -26,6 +26,9 @@ router.post(
       'app_hidden',
       'back_blocked',
       'split_screen_detected',
+      'picture_in_picture_detected',
+      'window_focus_lost',
+      'exam_heartbeat',
       'time_limit_reached'
     ]),
     body('metadata').optional().isObject()
@@ -45,6 +48,7 @@ router.post(
 
 router.get('/admin/events', authenticate, requireRole('admin'), attemptController.listEvents);
 router.get('/admin/locked', authenticate, requireRole('admin'), attemptController.listLocked);
+router.get('/admin/reports', authenticate, requireRole('admin'), attemptController.listReports);
 router.post('/admin/:attemptId/allow', authenticate, requireRole('admin'), attemptController.allowAttempt);
 
 module.exports = router;

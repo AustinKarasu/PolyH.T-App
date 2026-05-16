@@ -1,10 +1,10 @@
 {
   "appId": "polyht",
-  "latestVersion": "1.0.48",
-  "latestBuild": 49,
+  "latestVersion": "1.0.49",
+  "latestBuild": 50,
   "mandatory": true,
-  "releaseNotes": "Required update:\n- Fixes the Admin Accounts page when an older backend returns req is not defined.\n- Shows the primary superuser and approved admin accounts using the working applications endpoint as a fallback.\n- Keeps Play Store update prompts with APK fallback for direct installs.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.48/polyht-v1.0.48+49.apk",
+  "releaseNotes": "Required update:\n- Keeps the exam app in secure full-screen mode while a live test is open.\n- Sends heartbeat pings every 15 seconds until the test is submitted.\n- Locks attempts on back navigation, app backgrounding, split screen, picture-in-picture, or notification shade focus loss.\n- Adds AI Reports in the admin hamburger with Excel download for each student's attempted tests.\n- Makes scheduled-test notifications refresh faster and fire immediately for live or near-start tests.\n- Keeps Play Store update prompts with APK fallback for direct installs.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.49/polyht-v1.0.49+50.apk",
   "packageName": "in.polyht.polyht_admin",
   "usePlayStore": true,
   "playStoreUrl": "https://play.google.com/store/apps/details?id=in.polyht.polyht_admin"
