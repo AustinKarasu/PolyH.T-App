@@ -1,10 +1,10 @@
 {
   "appId": "polyht",
-  "latestVersion": "1.0.51",
-  "latestBuild": 52,
+  "latestVersion": "1.0.53",
+  "latestBuild": 54,
   "mandatory": true,
-  "releaseNotes": "Required update:\n- Shows AI Reports as a clean per-test list with student attempts under each test.\n- Adds professional PDF report download with PolyHT heading, summary counts, test details, timing, student details, and blocked actions.\n- Keeps Excel export available from the download menu.\n- Keeps secure exam heartbeat, report fallback, and India/local notification time fixes.",
-  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.51/polyht-v1.0.51+52.apk",
+  "releaseNotes": "Required update:\n- Uses the real PolyHT app logo in PDF report headers.\n- Renames AI Reports to Reports and AI ChatBot/AI Help to ChatBot.\n- Keeps professional per-test PDF reports, Excel export, secure exam heartbeat, and India/local notification time fixes.",
+  "downloadUrl": "https://github.com/AustinKarasu/PolyH.T-App/releases/download/v1.0.53/polyht-v1.0.53+54.apk",
   "packageName": "in.polyht.polyht_admin",
   "usePlayStore": true,
   "playStoreUrl": "https://play.google.com/store/apps/details?id=in.polyht.polyht_admin"

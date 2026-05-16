@@ -35,7 +35,7 @@ class _AttemptReportsScreenState extends State<AttemptReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Reports'),
+        title: const Text('Reports'),
         flexibleSpace: Container(
             decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
         actions: [

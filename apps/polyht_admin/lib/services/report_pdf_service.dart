@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,7 @@ class ReportPdfService {
     final pdf = pw.Document();
     final generatedAt = DateTime.now();
     final byTest = _groupByTest(reports);
+    final logo = await _loadLogo();
 
     pdf.addPage(
       pw.MultiPage(
@@ -23,7 +25,7 @@ class ReportPdfService {
             bold: pw.Font.helveticaBold(),
           ),
         ),
-        header: (context) => _header(generatedAt),
+        header: (context) => _header(generatedAt, logo),
         footer: (context) => pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
@@ -56,7 +58,16 @@ class ReportPdfService {
 
   Future<void> open(File file) => OpenFilex.open(file.path);
 
-  pw.Widget _header(DateTime generatedAt) {
+  Future<pw.MemoryImage?> _loadLogo() async {
+    try {
+      final data = await rootBundle.load('assets/images/polyht_logo.png');
+      return pw.MemoryImage(data.buffer.asUint8List());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  pw.Widget _header(DateTime generatedAt, pw.MemoryImage? logo) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
       decoration: const pw.BoxDecoration(
@@ -67,20 +78,7 @@ class ReportPdfService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Container(
-            width: 46,
-            height: 46,
-            alignment: pw.Alignment.center,
-            decoration: pw.BoxDecoration(
-              color: const PdfColor.fromInt(0xFF153E75),
-              borderRadius: pw.BorderRadius.circular(8),
-            ),
-            child: pw.Text('PH',
-                style: pw.TextStyle(
-                    color: PdfColors.white,
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold)),
-          ),
+          _logoMark(logo),
           pw.SizedBox(width: 12),
           pw.Expanded(
             child: pw.Column(
@@ -101,6 +99,40 @@ class ReportPdfService {
           pw.Text('Generated ${_dateTime(generatedAt)}', style: _mutedStyle(9)),
         ],
       ),
+    );
+  }
+
+  pw.Widget _logoMark(pw.MemoryImage? logo) {
+    if (logo != null) {
+      return pw.Container(
+        width: 48,
+        height: 48,
+        padding: const pw.EdgeInsets.all(3),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(
+              color: const PdfColor.fromInt(0xFFDBE3F0), width: 0.8),
+          borderRadius: pw.BorderRadius.circular(8),
+        ),
+        child: pw.ClipRRect(
+          horizontalRadius: 6,
+          verticalRadius: 6,
+          child: pw.Image(logo, fit: pw.BoxFit.cover),
+        ),
+      );
+    }
+    return pw.Container(
+      width: 46,
+      height: 46,
+      alignment: pw.Alignment.center,
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFF153E75),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Text('PH',
+          style: pw.TextStyle(
+              color: PdfColors.white,
+              fontSize: 18,
+              fontWeight: pw.FontWeight.bold)),
     );
   }
 

@@ -32,7 +32,7 @@ class _AdminChatbotScreenState extends State<AdminChatbotScreen> {
     final suggestions = _faqs.take(8).toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Poly H.T Assistant'),
+        title: const Text('ChatBot'),
         flexibleSpace: Container(
             decoration: const BoxDecoration(gradient: AppTheme.headerGradient)),
       ),

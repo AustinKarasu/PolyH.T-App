@@ -111,7 +111,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _DrawerItem(
                   icon: Icons.smart_toy_outlined,
-                  label: 'AI Help',
+                  label: 'ChatBot',
                   onTap: () {
                     Navigator.of(context).pop();
                     Navigator.of(context).push(MaterialPageRoute(
@@ -120,7 +120,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _DrawerItem(
                   icon: Icons.description_outlined,
-                  label: 'AI Reports',
+                  label: 'Reports',
                   onTap: () {
                     Navigator.of(context).pop();
                     Navigator.of(context).push(MaterialPageRoute(
