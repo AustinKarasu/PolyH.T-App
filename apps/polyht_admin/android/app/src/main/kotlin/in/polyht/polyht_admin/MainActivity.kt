@@ -26,6 +26,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "enterExamMode" -> {
                     examMode = true
                     applyExamMode()
+                    startPinnedMode()
                     result.success(null)
                 }
                 "reassertExamMode" -> {
@@ -35,6 +36,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "exitExamMode" -> {
                     examMode = false
                     clearExamMode()
+                    stopPinnedMode()
                     result.success(null)
                 }
                 "isInMultiWindowMode" -> result.success(isInMultiWindowOrPip())
@@ -122,6 +124,20 @@ class MainActivity : FlutterFragmentActivity() {
             previousInterruptionFilter?.let { notifications.setInterruptionFilter(it) }
         }
         previousInterruptionFilter = null
+    }
+
+    private fun startPinnedMode() {
+        try {
+            startLockTask()
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun stopPinnedMode() {
+        try {
+            stopLockTask()
+        } catch (_: Exception) {
+        }
     }
 
     private fun isInMultiWindowOrPip(): Boolean {

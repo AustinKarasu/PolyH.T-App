@@ -31,7 +31,7 @@ class _TestListScreenState extends State<TestListScreen> {
   void initState() {
     super.initState();
     _tests = _loadTests();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       unawaited(_refreshTestsSilently());
     });
     WidgetsBinding.instance
