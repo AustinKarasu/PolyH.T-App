@@ -18,7 +18,8 @@ const globalLimiter = rateLimit({
   windowMs: env.rateLimit.globalWindowMs,
   limit: env.rateLimit.globalMax,
   standardHeaders: 'draft-7',
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/api/auth/')
 });
 
 const authLimiter = rateLimit({
@@ -39,7 +40,7 @@ const passwordResetLimiter = rateLimit({
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  skipSuccessfulRequests: true,
+  skipFailedRequests: true,
   keyGenerator: (req) => {
     const email = normalizedBodyValue(req, 'email') || 'missing-email';
     const role = normalizedBodyValue(req, 'role') || 'missing-role';
