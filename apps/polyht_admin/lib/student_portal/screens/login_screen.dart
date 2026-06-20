@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../services/saved_credentials_service.dart';
 import '../../widgets/forgot_password_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<Offset> _slideUp;
   bool _obscurePassword = true;
   bool _showTotp = false;
+  bool _saveCredentials = false;
 
   @override
   void initState() {
@@ -36,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen>
         .animate(CurvedAnimation(
             parent: _animController, curve: Curves.easeOutCubic));
     _animController.forward();
+    _loadSavedCredentials();
   }
 
   @override
@@ -225,6 +228,17 @@ class _LoginScreenState extends State<LoginScreen>
                                       : null,
                                 ),
                               ],
+                              CheckboxListTile(
+                                value: _saveCredentials,
+                                onChanged: (value) => setState(
+                                    () => _saveCredentials = value ?? false),
+                                contentPadding: EdgeInsets.zero,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                title: const Text('Save login details'),
+                                subtitle: const Text(
+                                    'Use only on your personal device.'),
+                              ),
                               const SizedBox(height: 8),
                               if (auth.error != null) ...[
                                 const SizedBox(height: 8),
@@ -323,23 +337,225 @@ class _LoginScreenState extends State<LoginScreen>
         _totpController.clear();
       });
     } else if (mounted && auth.isAuthenticated) {
-      if (auth.requiresCredentialSetup) { _showInitialCredentials(context); } else { Navigator.of(context).popUntil((route) => route.isFirst); }
+      if (auth.requiresCredentialSetup) {
+        _showInitialCredentials(context, identifier);
+      } else {
+        await _saveOrClearCredentials(identifier, password);
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     }
   }
 
-  void _showInitialCredentials(BuildContext context) {
-    final email = TextEditingController(text: context.read<AuthProvider>().user?.email ?? '');
-    final otp = TextEditingController(); final password = TextEditingController();
-    showDialog(context: context, barrierDismissible: false, builder: (dialogContext) => AlertDialog(
-      title: const Text('Secure your student account'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('Confirm your current or new email with an OTP, then choose a strong password.'),
-        TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: 'Email', suffixIcon: IconButton(icon: const Icon(Icons.send), onPressed: () async { await context.read<AuthProvider>().requestInitialCredentialsOtp(email.text.trim()); if (dialogContext.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('OTP sent to this email'))); }))),
-        TextField(controller: otp, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Email OTP')),
-        TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'New password')),
-      ]),
-      actions: [FilledButton(onPressed: () async { try { await context.read<AuthProvider>().completeInitialCredentials(email.text.trim(), otp.text.trim(), password.text); if (dialogContext.mounted) { Navigator.pop(dialogContext); Navigator.of(context).popUntil((route) => route.isFirst); } } catch (e) { if (dialogContext.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); } }, child: const Text('Save and continue'))],
-    ));
+  void _showInitialCredentials(BuildContext context, String identifier) {
+    final auth = context.read<AuthProvider>();
+    final email = TextEditingController(text: auth.user?.email?.trim() ?? '');
+    final otp = TextEditingController();
+    final password = TextEditingController();
+    final confirmPassword = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    var saveCredentials = _saveCredentials;
+    var sendingOtp = false;
+    var saving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Secure your student account'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'You signed in with your date-of-birth password. Verify your email, then create a private password for future logins.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email address',
+                      suffixIcon: IconButton(
+                        tooltip: 'Send OTP',
+                        icon: sendingOtp
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send_outlined),
+                        onPressed: sendingOtp
+                            ? null
+                            : () async {
+                                final targetEmail = email.text.trim();
+                                if (!_isValidEmail(targetEmail)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Enter a valid email address')),
+                                  );
+                                  return;
+                                }
+                                setDialogState(() => sendingOtp = true);
+                                try {
+                                  await auth.requestInitialCredentialsOtp(
+                                      targetEmail);
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('OTP sent to this email')),
+                                    );
+                                  }
+                                } catch (err) {
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(_cleanError(err))),
+                                    );
+                                  }
+                                } finally {
+                                  if (dialogContext.mounted) {
+                                    setDialogState(() => sendingOtp = false);
+                                  }
+                                }
+                              },
+                      ),
+                    ),
+                    validator: (value) => _isValidEmail(value ?? '')
+                        ? null
+                        : 'Enter a valid email address',
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: otp,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Email OTP'),
+                    validator: (value) => (value ?? '').trim().length >= 6
+                        ? null
+                        : 'Enter the email OTP',
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: password,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(labelText: 'New password'),
+                    validator: (value) => _initialPasswordError(value ?? ''),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: confirmPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                        labelText: 'Confirm new password'),
+                    validator: (value) => value == password.text
+                        ? null
+                        : 'Passwords do not match',
+                  ),
+                  CheckboxListTile(
+                    value: saveCredentials,
+                    onChanged: (value) =>
+                        setDialogState(() => saveCredentials = value ?? false),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text('Save new login details'),
+                    subtitle: const Text('Use only on your personal device.'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => saving = true);
+                      try {
+                        await auth.completeInitialCredentials(
+                          email.text.trim(),
+                          otp.text.trim(),
+                          password.text,
+                        );
+                        _saveCredentials = saveCredentials;
+                        await _saveOrClearCredentials(
+                            identifier, password.text);
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                          Navigator.of(context)
+                              .popUntil((route) => route.isFirst);
+                        }
+                      } catch (err) {
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(_cleanError(err))),
+                          );
+                        }
+                      } finally {
+                        if (dialogContext.mounted) {
+                          setDialogState(() => saving = false);
+                        }
+                      }
+                    },
+              child: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save and continue'),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      email.dispose();
+      otp.dispose();
+      password.dispose();
+      confirmPassword.dispose();
+    });
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final saved = await SavedCredentialsService().read();
+    if (!mounted || saved == null) return;
+    setState(() {
+      _collegeIdController.text = saved.identifier;
+      _passwordController.text = saved.password;
+      _saveCredentials = true;
+    });
+  }
+
+  Future<void> _saveOrClearCredentials(
+      String identifier, String password) async {
+    final storage = SavedCredentialsService();
+    if (_saveCredentials) {
+      await storage.save(identifier, password);
+    } else {
+      await storage.clear();
+    }
+  }
+
+  bool _isValidEmail(String value) =>
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim());
+
+  String? _initialPasswordError(String value) {
+    if (value.length < 10) return 'Use at least 10 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Add an uppercase letter';
+    if (!RegExp(r'[a-z]').hasMatch(value)) return 'Add a lowercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Add a number';
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) return 'Add a symbol';
+    return null;
+  }
+
+  String _cleanError(Object err) {
+    return err.toString().replaceFirst('Exception: ', '');
   }
 
   void _showForgotPassword(BuildContext context) {
