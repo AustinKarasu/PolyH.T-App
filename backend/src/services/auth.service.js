@@ -109,7 +109,15 @@ async function completeInitialCredentials(userId, { email, emailOtpCode, newPass
   if (rows[0]?.role !== 'student' || !rows[0].must_change_credentials) throw new ApiError(403, 'Initial credential setup is not required');
   await emailOtpService.verifyOtp(requestedEmail, 'initial_credentials', emailOtpCode);
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await query('UPDATE users SET email = $1, password_hash = $2, must_change_credentials = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [requestedEmail, passwordHash, userId]);
+  try {
+    await query(
+      'UPDATE users SET email = $1, password_hash = $2, must_change_credentials = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+      [requestedEmail, passwordHash, userId]
+    );
+  } catch (err) {
+    if (err.code === '23505') throw new ApiError(409, 'This email address is already used by another account');
+    throw err;
+  }
   return getCurrentUser(userId);
 }
 
