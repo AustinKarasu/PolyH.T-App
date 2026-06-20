@@ -341,7 +341,7 @@ class _LoginScreenState extends State<LoginScreen>
         // Login updates the root route at the same time as this screen is
         // completing. Wait for that rebuild before attaching a modal route.
         // The test-list screen has the same gate for restored sessions.
-        await WidgetsBinding.instance.endOfFrame;
+        await Future<void>.delayed(Duration.zero);
         if (mounted && auth.requiresCredentialSetup) {
           await _showInitialCredentials(context, identifier);
         }
