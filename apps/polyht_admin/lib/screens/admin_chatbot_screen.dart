@@ -461,8 +461,8 @@ const _faqs = <_Faq>[
   _Faq(
       question: 'What is the superuser email?',
       answer:
-          'The permanent superuser is admin@gpkangra.edu. It is marked primary when the backend schema guard runs.',
-      keywords: ['superuser email', 'admin@gpkangra.edu']),
+          'The permanent superuser is admin@gpkangra.gov.in. It is marked primary when the backend schema guard runs.',
+      keywords: ['superuser email', 'admin@gpkangra.gov.in']),
   _Faq(
       question: 'Can the primary admin be deactivated?',
       answer:

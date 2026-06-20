@@ -44,7 +44,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       user = await _authService.login(identifier, password, totpCode: totpCode);
       requiresTwoFactor = false;
-    } on TwoFactorRequiredException catch (err) {
+    } on VerificationRequiredException catch (err) {
       requiresTwoFactor = true;
       error = err.toString();
     } catch (err) {
@@ -72,6 +72,7 @@ class AuthProvider extends ChangeNotifier {
     required String college,
     required String state,
     required String password,
+    required String emailOtpCode,
   }) async {
     isLoading = true;
     error = null;
@@ -86,6 +87,7 @@ class AuthProvider extends ChangeNotifier {
         college: college,
         state: state,
         password: password,
+        emailOtpCode: emailOtpCode,
       );
       return true;
     } catch (err) {
@@ -96,6 +98,9 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> requestAdminRegistrationOtp(String email) =>
+      _authService.requestAdminRegistrationOtp(email);
 
   Future<Map<String, dynamic>> setupTwoFactor() => _authService.setupTwoFactor();
 

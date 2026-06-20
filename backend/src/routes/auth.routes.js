@@ -13,10 +13,19 @@ router.post(
     body('identifier').trim().notEmpty(),
     body('password').isLength({ min: 6 }),
     body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
+    body('emailOtpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
     body('deviceLabel').optional().trim().isLength({ max: 160 })
   ],
   validate,
   authController.login
+);
+
+router.post(
+  '/register-admin/request-otp',
+  authLimiter,
+  [body('email').isEmail().normalizeEmail()],
+  validate,
+  authController.requestAdminRegistrationOtp
 );
 
 router.post(
@@ -36,7 +45,8 @@ router.post(
       minUppercase: 1,
       minNumbers: 1,
       minSymbols: 1
-    })
+    }),
+    body('emailOtpCode').trim().isLength({ min: 6, max: 8 })
   ],
   validate,
   authController.registerAdmin

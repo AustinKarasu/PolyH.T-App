@@ -2,8 +2,9 @@ const bcrypt = require('bcryptjs');
 const { query, transaction } = require('../config/db');
 const { ApiError } = require('../utils/api-error');
 const authService = require('./auth.service');
+const emailOtpService = require('./email-otp.service');
 
-const PRIMARY_ADMIN_EMAIL = 'admin@gpkangra.edu';
+const PRIMARY_ADMIN_EMAIL = 'admin@gpkangra.gov.in';
 
 async function listAdmins(actingAdminId) {
   await requirePrimaryAdmin(actingAdminId);
@@ -222,8 +223,19 @@ async function setAdminActive(adminId, isActive, actingAdminId) {
   );
 }
 
-async function setPrimaryAdmin(adminId, actingAdminId) {
+async function setPrimaryAdmin(adminId, actingAdminId, otpCode) {
   await requirePrimaryAdmin(actingAdminId);
+  const actingRows = await query(
+    'SELECT email FROM users WHERE id = $1 AND role = $2 AND is_active = true LIMIT 1',
+    [actingAdminId, 'admin']
+  );
+  const actingEmail = actingRows[0]?.email;
+  if (!actingEmail) throw new ApiError(422, 'Your admin account needs an email before changing primary admin');
+  if (!otpCode) {
+    await emailOtpService.sendOtp(actingEmail, 'primary_admin', 'e-PolyPariksha HP primary admin verification code');
+    throw new ApiError(428, 'Email OTP sent. Enter the OTP to make this admin primary.');
+  }
+  await emailOtpService.verifyOtp(actingEmail, 'primary_admin', otpCode);
   const rows = await query('SELECT id, is_active FROM users WHERE id = $1 AND role = $2 LIMIT 1', [adminId, 'admin']);
   if (!rows[0]) throw new ApiError(404, 'Admin account not found');
   if (!rows[0].is_active) throw new ApiError(422, 'Only an active admin can be primary');

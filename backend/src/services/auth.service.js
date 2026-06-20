@@ -5,6 +5,12 @@ const { query } = require('../config/db');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
 const storageService = require('./storage.service');
+const emailOtpService = require('./email-otp.service');
+
+const OTP_PURPOSES = {
+  adminLogin: 'admin_login',
+  adminRegister: 'admin_register'
+};
 
 async function login(identifier, password, context = {}) {
   await assertLoginAllowed(identifier, context.ipAddress);
@@ -37,7 +43,13 @@ async function login(identifier, password, context = {}) {
     throw new ApiError(401, 'Invalid credentials');
   }
 
-  if (user.two_factor_enabled) {
+  if (user.role === 'admin') {
+    if (!context.emailOtpCode) {
+      await emailOtpService.sendOtp(user.email, OTP_PURPOSES.adminLogin, 'e-PolyPariksha HP admin sign-in code');
+      return { requiresEmailOtp: true, message: 'Email OTP sent to your admin email.' };
+    }
+    await emailOtpService.verifyOtp(user.email, OTP_PURPOSES.adminLogin, context.emailOtpCode);
+  } else if (user.two_factor_enabled) {
     if (!context.totpCode) {
       return { requiresTwoFactor: true, message: 'Authenticator code required' };
     }
@@ -79,6 +91,7 @@ async function registerAdmin(payload) {
   if (!email || !college || !state || !payload.password) {
     throw new ApiError(422, 'All fields except middle name are required');
   }
+  await emailOtpService.verifyOtp(email, OTP_PURPOSES.adminRegister, payload.emailOtpCode);
 
   const passwordHash = await bcrypt.hash(payload.password, 12);
   const existing = await query('SELECT id FROM users WHERE lower(email) = lower($1) LIMIT 1', [email]);
@@ -122,6 +135,11 @@ async function registerAdmin(payload) {
     if (err.code === '23505') throw new ApiError(409, 'An application with this email already exists');
     throw err;
   }
+}
+
+async function requestAdminRegistrationOtp(email) {
+  await emailOtpService.sendOtp(email, OTP_PURPOSES.adminRegister, 'e-PolyPariksha HP admin registration code');
+  return { status: 'sent' };
 }
 
 async function getCurrentUser(userId) {
@@ -305,6 +323,7 @@ async function clearLoginFailures(identifier, ipAddress = '') {
 
 module.exports = {
   login,
+  requestAdminRegistrationOtp,
   registerAdmin,
   getCurrentUser,
   updateCurrentUser,

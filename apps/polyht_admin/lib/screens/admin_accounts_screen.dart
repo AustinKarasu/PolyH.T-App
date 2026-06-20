@@ -139,10 +139,7 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
                       _AdminTile(
                         admin: admin,
                         canManagePrimary: isPrimaryAdmin,
-                        onPrimary: () async {
-                          await _service.setPrimary(admin.id);
-                          _refresh();
-                        },
+                        onPrimary: () => _makePrimary(admin),
                         onToggle: () async {
                           await _service.setActive(admin.id, !admin.isActive);
                           _refresh();
@@ -277,6 +274,54 @@ class _AdminAccountsScreenState extends State<AdminAccountsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(err.toString().replaceFirst('Exception: ', ''))));
       }
+    }
+  }
+
+  Future<void> _makePrimary(AdminAccount admin) async {
+    try {
+      await _service.setPrimary(admin.id);
+    } catch (err) {
+      final message = err.toString().replaceFirst('Exception: ', '');
+      if (!message.toLowerCase().contains('otp')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
+    final otpController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify primary admin change'),
+        content: TextField(
+          controller: otpController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Email OTP'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Verify')),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      otpController.dispose();
+      return;
+    }
+    try {
+      await _service.setPrimary(admin.id, otpCode: otpController.text.trim());
+      _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${admin.fullName} is now primary')));
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))));
+      }
+    } finally {
+      otpController.dispose();
     }
   }
 

@@ -34,6 +34,14 @@ const env = {
       endpoint: process.env.S3_ENDPOINT || '',
       publicBaseUrl: process.env.S3_PUBLIC_BASE_URL || ''
     }
+  },
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.MAIL_FROM || process.env.SMTP_USER || ''
   }
 };
 

@@ -16,7 +16,7 @@ const STUDENT_SELECT = `
 function passwordFromDob(dob) {
   const match = String(dob || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) throw new ApiError(422, 'Student date of birth is required for the default password');
-  return match[0];
+  return `${match[3]}${match[2]}${match[1]}`;
 }
 
 async function getStudentProfile(userId) {
@@ -127,7 +127,6 @@ async function adminCreateStudent(payload, actingAdminId) {
   const requiredFields = [
     ['fullName', 'Full name'],
     ['collegeId', 'College ID'],
-    ['password', 'Password'],
     ['email', 'Email'],
     ['dob', 'Date of birth'],
     ['semester', 'Semester'],

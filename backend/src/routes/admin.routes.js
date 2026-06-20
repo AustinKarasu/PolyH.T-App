@@ -50,7 +50,12 @@ router.patch(
   validate,
   adminController.setAdminActive
 );
-router.patch('/:id/primary', adminController.setPrimaryAdmin);
+router.patch(
+  '/:id/primary',
+  [body('otpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 })],
+  validate,
+  adminController.setPrimaryAdmin
+);
 router.delete('/:id', adminController.deleteAdmin);
 router.post(
   '/clear-data',

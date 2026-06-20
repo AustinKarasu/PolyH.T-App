@@ -5,6 +5,7 @@ async function login(req, res, next) {
     const result = await authService.login(req.body.identifier, req.body.password, {
       deviceLabel: req.body.deviceLabel,
       totpCode: req.body.totpCode,
+      emailOtpCode: req.body.emailOtpCode,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
@@ -27,6 +28,15 @@ async function registerAdmin(req, res, next) {
   try {
     const admin = await authService.registerAdmin(req.body);
     res.status(201).json({ admin });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function requestAdminRegistrationOtp(req, res, next) {
+  try {
+    const result = await authService.requestAdminRegistrationOtp(req.body.email);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -101,6 +111,7 @@ async function logout(req, res, next) {
 
 module.exports = {
   login,
+  requestAdminRegistrationOtp,
   registerAdmin,
   me,
   updateMe,

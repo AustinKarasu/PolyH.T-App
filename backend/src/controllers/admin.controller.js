@@ -69,7 +69,7 @@ async function setAdminActive(req, res, next) {
 
 async function setPrimaryAdmin(req, res, next) {
   try {
-    await adminService.setPrimaryAdmin(Number(req.params.id), req.user.sub);
+    await adminService.setPrimaryAdmin(Number(req.params.id), req.user.sub, req.body.otpCode);
     res.json({ status: 'updated' });
   } catch (err) {
     next(err);

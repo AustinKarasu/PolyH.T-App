@@ -140,12 +140,23 @@ CREATE TABLE IF NOT EXISTS login_failures (
   PRIMARY KEY (identifier_hash, ip_address)
 );
 
+CREATE TABLE IF NOT EXISTS email_otps (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(160) NOT NULL,
+  purpose VARCHAR(40) NOT NULL,
+  code_hash VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_attempts_student ON test_attempts(student_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_test ON test_attempts(test_id);
 CREATE INDEX IF NOT EXISTS idx_events_attempt ON exam_events(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_events_test ON exam_events(test_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_jti ON auth_sessions(token_jti);
+CREATE INDEX IF NOT EXISTS idx_email_otps_lookup ON email_otps (email, purpose, expires_at);
 CREATE INDEX IF NOT EXISTS idx_users_created_by_admin ON users(created_by_admin_id);
 CREATE INDEX IF NOT EXISTS idx_tests_created_by ON tests(created_by);
 CREATE INDEX IF NOT EXISTS idx_admin_applications_status ON admin_applications(status);

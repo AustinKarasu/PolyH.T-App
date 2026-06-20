@@ -97,12 +97,25 @@ async function ensureRuntimeSchema() {
       CREATE INDEX IF NOT EXISTS idx_tests_created_by ON tests(created_by);
       CREATE INDEX IF NOT EXISTS idx_admin_applications_status ON admin_applications(status);
 
+      CREATE TABLE IF NOT EXISTS email_otps (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(160) NOT NULL,
+        purpose VARCHAR(40) NOT NULL,
+        code_hash VARCHAR(64) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        consumed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_email_otps_lookup
+        ON email_otps (email, purpose, expires_at);
+
       UPDATE users
       SET is_primary_admin = TRUE,
           is_active = TRUE,
           updated_at = CURRENT_TIMESTAMP
       WHERE role = 'admin'
-        AND lower(email) = 'admin@gpkangra.edu';
+        AND lower(email) = 'admin@gpkangra.gov.in';
     `).catch((err) => {
       runtimeSchemaReady = null;
       throw err;

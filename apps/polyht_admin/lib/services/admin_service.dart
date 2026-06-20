@@ -31,7 +31,7 @@ class AdminService {
       AdminAccount(
         id: currentUser.id,
         fullName: currentUser.fullName,
-        email: currentUser.email ?? 'admin@gpkangra.edu',
+        email: currentUser.email ?? 'admin@gpkangra.gov.in',
         isActive: currentUser.isActive ?? true,
         twoFactorEnabled: currentUser.twoFactorEnabled ?? false,
         isPrimaryAdmin: currentUser.isPrimaryAdmin ?? true,
@@ -94,8 +94,10 @@ class AdminService {
     await _apiClient.delete('/admins/applications/$applicationId');
   }
 
-  Future<void> setPrimary(int adminId) async {
-    await _apiClient.patch('/admins/$adminId/primary', {});
+  Future<void> setPrimary(int adminId, {String? otpCode}) async {
+    await _apiClient.patch('/admins/$adminId/primary', {
+      if (otpCode != null && otpCode.isNotEmpty) 'otpCode': otpCode,
+    });
   }
 
   Future<void> deleteAdmin(int adminId) async {

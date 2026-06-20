@@ -2,8 +2,8 @@ import '../models/app_user.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
 
-class TwoFactorRequiredException implements Exception {
-  const TwoFactorRequiredException([this.message = 'Enter your authenticator code to continue.']);
+class VerificationRequiredException implements Exception {
+  const VerificationRequiredException([this.message = 'Enter your verification code to continue.']);
 
   final String message;
 
@@ -23,10 +23,13 @@ class AuthService {
     final data = await _apiClient.post('/auth/login', {
       'identifier': identifier,
       'password': password,
-      if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode,
+      if (totpCode != null && totpCode.isNotEmpty) ...{
+        'totpCode': totpCode,
+        'emailOtpCode': totpCode,
+      },
     });
-    if (data['requiresTwoFactor'] == true) {
-      throw TwoFactorRequiredException(data['message']?.toString() ?? 'Enter your authenticator code to continue.');
+    if (data['requiresTwoFactor'] == true || data['requiresEmailOtp'] == true) {
+      throw VerificationRequiredException(data['message']?.toString() ?? 'Enter your verification code to continue.');
     }
     final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
     if (user.role != 'admin') {
@@ -60,6 +63,7 @@ class AuthService {
     required String college,
     required String state,
     required String password,
+    required String emailOtpCode,
   }) async {
     await _apiClient.post('/auth/register-admin', {
       'firstName': firstName,
@@ -70,7 +74,12 @@ class AuthService {
       'college': college,
       'state': state,
       'password': password,
+      'emailOtpCode': emailOtpCode,
     });
+  }
+
+  Future<void> requestAdminRegistrationOtp(String email) async {
+    await _apiClient.post('/auth/register-admin/request-otp', {'email': email});
   }
 
   Future<AppUser> updateProfile({
