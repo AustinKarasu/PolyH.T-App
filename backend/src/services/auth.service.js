@@ -16,6 +16,10 @@ const OTP_PURPOSES = {
   passwordReset: 'password_reset'
 };
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
 async function login(identifier, password, context = {}) {
   await assertLoginAllowed(identifier, context.ipAddress);
 
