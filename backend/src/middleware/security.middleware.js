@@ -6,6 +6,14 @@ const rateLimit = require('express-rate-limit');
 const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
 
+function clientIp(req) {
+  return req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown-ip';
+}
+
+function normalizedBodyValue(req, field) {
+  return String(req.body?.[field] || '').trim().toLowerCase();
+}
+
 const globalLimiter = rateLimit({
   windowMs: env.rateLimit.globalWindowMs,
   limit: env.rateLimit.globalMax,
@@ -18,6 +26,11 @@ const authLimiter = rateLimit({
   limit: env.rateLimit.authMax,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const identity = normalizedBodyValue(req, 'identifier') || normalizedBodyValue(req, 'email') || 'anonymous';
+    return [clientIp(req), req.method, req.baseUrl, req.path, identity].join(':');
+  },
   message: { message: 'Too many authentication attempts. Try again later.' }
 });
 
@@ -26,6 +39,12 @@ const passwordResetLimiter = rateLimit({
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const email = normalizedBodyValue(req, 'email') || 'missing-email';
+    const role = normalizedBodyValue(req, 'role') || 'missing-role';
+    return [clientIp(req), req.method, req.baseUrl, req.path, role, email].join(':');
+  },
   message: { message: 'Too many password reset attempts. Try again in one hour.' }
 });
 

@@ -32,6 +32,9 @@ function transporter() {
     host: env.smtp.host,
     port: env.smtp.port,
     secure: env.smtp.secure,
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
     auth: {
       user: env.smtp.user,
       pass: env.smtp.pass
@@ -68,11 +71,6 @@ async function sendOtp(email, purpose, subject = 'e-PolyPariksha HP verification
   }
 
   const code = generateCode();
-  await query(
-    `INSERT INTO email_otps (email, purpose, code_hash, expires_at)
-     VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' minutes')::INTERVAL)`,
-    [normalizedEmail, purpose, hashCode(normalizedEmail, purpose, code), OTP_TTL_MINUTES]
-  );
 
   await transporter().sendMail({
     from: env.smtp.from,
@@ -81,6 +79,12 @@ async function sendOtp(email, purpose, subject = 'e-PolyPariksha HP verification
     text: `Your e-PolyPariksha HP verification code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. Do not share this code.`,
     html: otpEmailHtml(code, subject)
   });
+
+  await query(
+    `INSERT INTO email_otps (email, purpose, code_hash, expires_at)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' minutes')::INTERVAL)`,
+    [normalizedEmail, purpose, hashCode(normalizedEmail, purpose, code), OTP_TTL_MINUTES]
+  );
 }
 
 function otpEmailHtml(code, subject) {
