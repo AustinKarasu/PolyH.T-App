@@ -418,14 +418,33 @@ function normalizeResetRole(role) {
 }
 
 function isDobPassword(dob, password) {
-  if (!dob) return false;
-  const value = String(password || '').trim();
-  const date = dob instanceof Date ? dob : new Date(dob);
-  if (Number.isNaN(date.getTime())) return false;
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const year = String(date.getUTCFullYear());
-  return value === `${day}${month}${year}`;
+  const parts = dobParts(dob);
+  return parts != null && String(password || '').trim() == `${parts.day}${parts.month}${parts.year}`;
+}
+
+function dobParts(dob) {
+  if (!dob) return null;
+  if (dob instanceof Date && !Number.isNaN(dob.getTime())) {
+    return {
+      day: String(dob.getUTCDate()).padStart(2, '0'),
+      month: String(dob.getUTCMonth() + 1).padStart(2, '0'),
+      year: String(dob.getUTCFullYear())
+    };
+  }
+  const text = String(dob).trim();
+  const dayFirst = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(text);
+  if (dayFirst) {
+    return {
+      day: dayFirst[1].padStart(2, '0'),
+      month: dayFirst[2].padStart(2, '0'),
+      year: dayFirst[3]
+    };
+  }
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(text);
+  if (iso) {
+    return { day: iso[3].padStart(2, '0'), month: iso[2].padStart(2, '0'), year: iso[1] };
+  }
+  return null;
 }
 
 function loginFailureKey(identifier) {

@@ -153,9 +153,16 @@ class AuthService {
   bool _isDobPassword(String? dob, String password) {
     if (dob == null || password.trim().length != 8) return false;
     final cleanDob = dob.trim();
-    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(cleanDob);
-    if (match == null) return false;
+    final dayFirst = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})')
+        .firstMatch(cleanDob);
+    if (dayFirst != null) {
+      final day = dayFirst.group(1)!.padLeft(2, '0');
+      final month = dayFirst.group(2)!.padLeft(2, '0');
+      return password.trim() == '${day}${month}${dayFirst.group(3)}';
+    }
+    final iso = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})').firstMatch(cleanDob);
+    if (iso == null) return false;
     return password.trim() ==
-        '${match.group(3)}${match.group(2)}${match.group(1)}';
+        '${iso.group(3)!.padLeft(2, '0')}${iso.group(2)!.padLeft(2, '0')}${iso.group(1)}';
   }
 }
