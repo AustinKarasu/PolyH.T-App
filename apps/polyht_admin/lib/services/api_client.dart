@@ -10,6 +10,7 @@ import 'token_storage.dart';
 class ApiClient {
   ApiClient({TokenStorage? tokenStorage}) : _tokenStorage = tokenStorage ?? TokenStorage();
 
+  static final http.Client _client = http.Client();
   final TokenStorage _tokenStorage;
 
   Future<Map<String, String>> _headers({bool jsonBody = true}) async {
@@ -21,7 +22,7 @@ class ApiClient {
   }
 
   Future<dynamic> get(String path) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: await _headers(),
     );
@@ -29,7 +30,7 @@ class ApiClient {
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: await _headers(),
       body: jsonEncode(body),
@@ -38,7 +39,7 @@ class ApiClient {
   }
 
   Future<dynamic> postEmpty(String path) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: await _headers(),
     );
@@ -46,7 +47,7 @@ class ApiClient {
   }
 
   Future<void> delete(String path) async {
-    final response = await http.delete(
+    final response = await _client.delete(
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: await _headers(),
     );
@@ -56,7 +57,7 @@ class ApiClient {
   }
 
   Future<dynamic> patch(String path, Map<String, dynamic> body) async {
-    final response = await http.patch(
+    final response = await _client.patch(
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: await _headers(),
       body: jsonEncode(body),
@@ -108,7 +109,7 @@ class ApiClient {
   }
 
   Future<String> downloadPdf(int testId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConfig.baseUrl}/tests/$testId/admin/pdf'),
       headers: {
         ...await _headers(jsonBody: false),

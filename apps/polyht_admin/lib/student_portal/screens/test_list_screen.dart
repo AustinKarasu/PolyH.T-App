@@ -11,6 +11,7 @@ import '../providers/auth_provider.dart';
 import '../services/test_service.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/update_button.dart';
+import '../widgets/password_strength_indicator.dart';
 import 'exam_screen.dart';
 
 class TestListScreen extends StatefulWidget {
@@ -109,62 +110,58 @@ class _TestListScreenState extends State<TestListScreen> {
                     TextFormField(
                       controller: email,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email address',
-                        suffixIcon: IconButton(
-                          tooltip: 'Send OTP',
-                          icon: sendingOtp
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.send_outlined),
-                          onPressed: sendingOtp
-                              ? null
-                              : () async {
-                                  final targetEmail = email.text.trim();
-                                  if (!_validEmail(targetEmail)) {
-                                    ScaffoldMessenger.of(dialogContext)
-                                        .showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Enter a valid email address')),
-                                    );
-                                    return;
-                                  }
-                                  setDialogState(() => sendingOtp = true);
-                                  try {
-                                    await auth.requestInitialCredentialsOtp(
-                                        targetEmail);
-                                    if (dialogContext.mounted) {
-                                      ScaffoldMessenger.of(dialogContext)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content:
-                                                Text('OTP sent to this email')),
-                                      );
-                                    }
-                                  } catch (err) {
-                                    if (dialogContext.mounted) {
-                                      ScaffoldMessenger.of(dialogContext)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content: Text(_cleanError(err))),
-                                      );
-                                    }
-                                  } finally {
-                                    if (dialogContext.mounted) {
-                                      setDialogState(() => sendingOtp = false);
-                                    }
-                                  }
-                                },
-                        ),
-                      ),
+                      decoration:
+                          const InputDecoration(labelText: 'Email address'),
                       validator: (value) => _validEmail(value ?? '')
                           ? null
                           : 'Enter a valid email address',
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
+                        onPressed: sendingOtp
+                            ? null
+                            : () async {
+                                final targetEmail = email.text.trim();
+                                if (!_validEmail(targetEmail)) {
+                                  ScaffoldMessenger.of(dialogContext)
+                                      .showSnackBar(const SnackBar(
+                                          content: Text(
+                                              'Enter a valid email address')));
+                                  return;
+                                }
+                                setDialogState(() => sendingOtp = true);
+                                try {
+                                  await auth.requestInitialCredentialsOtp(
+                                      targetEmail);
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(dialogContext)
+                                        .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'OTP sent to this email')));
+                                  }
+                                } catch (err) {
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(dialogContext)
+                                        .showSnackBar(SnackBar(
+                                            content: Text(_cleanError(err))));
+                                  }
+                                } finally {
+                                  if (dialogContext.mounted) {
+                                    setDialogState(() => sendingOtp = false);
+                                  }
+                                }
+                              },
+                        icon: sendingOtp
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.send_outlined),
+                        label: Text(sendingOtp ? 'Sending OTP' : 'Send OTP'),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -181,8 +178,11 @@ class _TestListScreenState extends State<TestListScreen> {
                       obscureText: true,
                       decoration:
                           const InputDecoration(labelText: 'New password'),
+                      onChanged: (_) => setDialogState(() {}),
                       validator: (value) => _passwordError(value ?? ''),
                     ),
+                    const SizedBox(height: 8),
+                    PasswordStrengthIndicator(password: password.text),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: confirmPassword,
@@ -247,11 +247,7 @@ class _TestListScreenState extends State<TestListScreen> {
       RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim());
 
   String? _passwordError(String value) {
-    if (value.length < 10) return 'Use at least 10 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Add an uppercase letter';
-    if (!RegExp(r'[a-z]').hasMatch(value)) return 'Add a lowercase letter';
-    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Add a number';
-    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) return 'Add a symbol';
+    if (value.length < 8) return 'Use at least 8 characters';
     return null;
   }
 
