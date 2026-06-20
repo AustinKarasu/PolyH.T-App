@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/update_service.dart';
@@ -16,14 +18,23 @@ class _UpdateGateState extends State<UpdateGate> {
   AppUpdate? _mandatoryUpdate;
   String? _checkError;
   bool _installing = false;
+  Timer? _retryTimer;
 
   @override
   void initState() {
     super.initState();
     _check();
+    _retryTimer = Timer.periodic(const Duration(minutes: 1), (_) => _check());
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _check() async {
+    if (_installing || _mandatoryUpdate != null) return;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
         final update = await _service.checkForUpdate();
