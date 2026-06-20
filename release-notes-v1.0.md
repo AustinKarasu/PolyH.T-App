@@ -1,4 +1,4 @@
-e-PolyPariksha HP helps a college run house tests in one simple app.
+e-PolyPariksha HP helps Polytechnic colleges run tests in one simple app.
 
 How to download:
 - Open this release and download the APK file.
@@ -7,7 +7,7 @@ How to download:
 
 For admins:
 - Sign in with your approved admin account.
-- Add student records, prepare test papers, schedule tests, and review submitted attempt reports from the admin area.
+- Add student records, prepare test papers, schedule tests.
 - Keep student details correct before starting a test so the right students can see the right paper.
 
 For students:
@@ -18,4 +18,3 @@ For students:
 How it works:
 - Admins create and schedule tests.
 - Students see only the tests assigned to them.
-- The app records test activity and helps the college review attempts after the test.
