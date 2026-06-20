@@ -239,7 +239,7 @@ async function listAttemptReports(filters = {}, adminUser) {
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = Math.min(Number(filters.limit || 500), 1000);
-  const criticalTypes = Array.from(criticalEvents);
+  const criticalTypes = Array.from(navigationEvents);
 
   const reports = await query(
     `SELECT a.id AS attempt_id, a.status, a.started_at, a.last_seen_at, a.completed_at,

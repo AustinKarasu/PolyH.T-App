@@ -52,7 +52,7 @@ router.post(
   attemptController.completeAttempt
 );
 
-const reportFilters = [query('branchId').optional().isInt({ min: 1 }), query('testId').optional().isInt({ min: 1 }), query('studentId').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 500 }), query('reportFallback').optional().isIn(['true', 'false'])];
+const reportFilters = [query('branchId').optional().isInt({ min: 1 }), query('testId').optional().isInt({ min: 1 }), query('studentId').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 1000 }), query('reportFallback').optional().isIn(['true', 'false'])];
 router.get('/admin/events', authenticate, requireRole('admin'), reportFilters, validate, attemptController.listEvents);
 router.get('/admin/locked', authenticate, requireRole('admin'), reportFilters, validate, attemptController.listLocked);
 router.get('/admin/reports', authenticate, requireRole('admin'), reportFilters, validate, attemptController.listReports);
