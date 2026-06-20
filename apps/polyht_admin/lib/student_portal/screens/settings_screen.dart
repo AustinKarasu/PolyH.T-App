@@ -4,9 +4,15 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../../services/biometric_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+  @override State<SettingsScreen> createState() => _SettingsScreenState();
+}
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _biometricEnabled = false;
+  @override void initState() { super.initState(); BiometricService().enabled(true).then((value) { if (mounted) setState(() => _biometricEnabled = value); }); }
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +36,8 @@ class SettingsScreen extends StatelessWidget {
               FilledButton(onPressed: () => enabled ? _disable(context) : _enable(context), child: Text(enabled ? 'Disable' : 'Enable')),
             ]),
           ),
+          const SizedBox(height: 12),
+          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Theme.of(context).cardTheme.color, borderRadius: BorderRadius.circular(AppTheme.radiusLg), boxShadow: AppTheme.cardShadow), child: Row(children: [const Icon(Icons.fingerprint_rounded, color: AppTheme.primary), const SizedBox(width: 12), Expanded(child: Text(_biometricEnabled ? 'Biometric unlock is enabled' : 'Biometric unlock is off')), Switch(value: _biometricEnabled, onChanged: (value) async { final biometrics = BiometricService(); if (value && (!(await biometrics.available()) || !(await biometrics.authenticate()))) return; await biometrics.setEnabled(true, value); if (mounted) setState(() => _biometricEnabled = value); })])),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),

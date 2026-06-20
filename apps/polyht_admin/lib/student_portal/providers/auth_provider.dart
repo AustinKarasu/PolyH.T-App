@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/token_storage.dart';
+import '../../services/biometric_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final _authService = AuthService();
@@ -18,6 +19,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> restoreSession() async {
     final token = await _tokenStorage.readToken();
     if (token != null) {
+      final biometrics = BiometricService();
+      if (await biometrics.enabled(true) && !await biometrics.authenticate()) { await _tokenStorage.clear(); isLoading = false; notifyListeners(); return; }
       try {
         user = await _authService.me();
         requiresTwoFactor = false;

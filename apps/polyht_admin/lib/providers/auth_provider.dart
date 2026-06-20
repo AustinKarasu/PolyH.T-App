@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/token_storage.dart';
+import '../services/biometric_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final _authService = AuthService();
@@ -21,6 +22,10 @@ class AuthProvider extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
       return;
+    }
+    final biometrics = BiometricService();
+    if (await biometrics.enabled(false) && !await biometrics.authenticate()) {
+      await _tokenStorage.clear(); isLoading = false; notifyListeners(); return;
     }
     try {
       user = await _authService.me();

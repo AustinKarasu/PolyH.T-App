@@ -7,6 +7,7 @@ import '../config/app_theme.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 import '../utils/photo_image.dart';
+import '../services/biometric_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +18,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _saving = false;
+  bool _biometricEnabled = false;
+  @override void initState() { super.initState(); BiometricService().enabled(false).then((value) { if (mounted) setState(() => _biometricEnabled = value); }); }
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +50,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           FilledButton.icon(onPressed: _saving ? null : _editProfile, icon: const Icon(Icons.edit_rounded), label: const Text('Edit Profile')),
           const SizedBox(height: 20),
+          _SettingCard(title: 'Biometric unlock', subtitle: _biometricEnabled ? 'Enabled for this device' : 'Off for this device', action: Switch(value: _biometricEnabled, onChanged: _saving ? null : (value) async { final biometrics = BiometricService(); if (value && (!(await biometrics.available()) || !(await biometrics.authenticate()))) return; await biometrics.setEnabled(false, value); if (mounted) setState(() => _biometricEnabled = value); })),
+          const SizedBox(height: 12),
           _SettingCard(
             title: 'Two-factor authentication',
             subtitle: user.twoFactorEnabled == true ? 'Enabled for this admin account' : 'Off for this admin account',
