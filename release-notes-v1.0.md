@@ -1,9 +1,9 @@
 e-PolyPariksha HP helps Polytechnic colleges run tests in one simple app.
 
-How to download:
-- Open this release and download the APK file.
-- Install it on your Android phone. If Android asks, allow installation from your browser or file manager.
-- Open e-PolyPariksha HP after installation.
+How to update:
+- Tap the update button in the app.
+- The app downloads the update and opens the installer automatically.
+- Tap Install when Android asks for confirmation.
 
 For admins:
 - Sign in with your approved admin account.

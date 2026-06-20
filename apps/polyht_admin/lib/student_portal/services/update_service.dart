@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/update_config.dart';
@@ -25,7 +28,7 @@ class AppUpdate {
   final bool mandatory;
 
   bool get usesPlayStore => playStoreUrl.isNotEmpty;
-  String get actionLabel => usesPlayStore ? 'Update on Play Store' : 'Download';
+  String get actionLabel => usesPlayStore ? 'Update on Play Store' : 'Install update';
   String get fallbackMessage => usesPlayStore
       ? 'A newer Play Store build is ready to install.'
       : 'A newer APK is ready to install.';
@@ -86,10 +89,43 @@ class UpdateService {
     if (update.downloadUrl.isEmpty) {
       throw Exception('Update link is not available yet');
     }
-    final downloadUri = Uri.parse(update.downloadUrl);
-    if (!await launchUrl(downloadUri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Unable to open update link');
+    if (!Platform.isAndroid) {
+      final downloadUri = Uri.parse(update.downloadUrl);
+      if (!await launchUrl(downloadUri, mode: LaunchMode.externalApplication)) {
+        throw Exception('Unable to open update link');
+      }
+      return;
     }
+    final apk = await _downloadApk(update);
+    final result = await OpenFilex.open(
+      apk.path,
+      type: 'application/vnd.android.package-archive',
+    );
+    if (result.type != ResultType.done) {
+      throw Exception(result.message.isEmpty
+          ? 'Unable to start update installer'
+          : result.message);
+    }
+  }
+
+  Future<File> _downloadApk(AppUpdate update) async {
+    final uri = Uri.parse(update.downloadUrl);
+    final request = http.Request('GET', uri)..followRedirects = true;
+    final response = await request.send().timeout(const Duration(seconds: 20));
+    if (response.statusCode >= 400) {
+      throw Exception('Unable to download update');
+    }
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/epolypariksha-hp-update.apk');
+    final sink = file.openWrite();
+    try {
+      await response.stream.pipe(sink);
+    } catch (_) {
+      await sink.close();
+      rethrow;
+    }
+    return file;
   }
 
   bool _isNewerVersion(String latest, String current) {
