@@ -295,6 +295,11 @@ function loginFailureKey(identifier) {
 }
 
 async function assertLoginAllowed(identifier, ipAddress = '') {
+  await query(
+    `DELETE FROM login_failures
+     WHERE identifier_hash = $1 AND ip_address = $2 AND locked_until <= CURRENT_TIMESTAMP`,
+    [loginFailureKey(identifier), ipAddress || 'unknown']
+  );
   const rows = await query(
     `SELECT locked_until
      FROM login_failures
@@ -304,7 +309,7 @@ async function assertLoginAllowed(identifier, ipAddress = '') {
     [loginFailureKey(identifier), ipAddress || 'unknown']
   );
   if (rows[0]) {
-    throw new ApiError(429, 'Too many failed login attempts. Try again after 15 minutes.');
+    throw new ApiError(429, 'Too many failed login attempts. Try again after 5 minutes.');
   }
 }
 
@@ -315,18 +320,18 @@ async function recordLoginFailure(identifier, ipAddress = '') {
      ON CONFLICT (identifier_hash, ip_address)
      DO UPDATE SET
        failed_count = CASE
-         WHEN login_failures.last_failed_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes' THEN 1
+         WHEN login_failures.last_failed_at < CURRENT_TIMESTAMP - INTERVAL '5 minutes' THEN 1
          ELSE login_failures.failed_count + 1
        END,
        first_failed_at = CASE
-         WHEN login_failures.last_failed_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes' THEN CURRENT_TIMESTAMP
+         WHEN login_failures.last_failed_at < CURRENT_TIMESTAMP - INTERVAL '5 minutes' THEN CURRENT_TIMESTAMP
          ELSE login_failures.first_failed_at
        END,
        last_failed_at = CURRENT_TIMESTAMP,
        locked_until = CASE
-         WHEN login_failures.last_failed_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
-              AND login_failures.failed_count + 1 >= 5
-           THEN CURRENT_TIMESTAMP + INTERVAL '15 minutes'
+         WHEN login_failures.last_failed_at >= CURRENT_TIMESTAMP - INTERVAL '5 minutes'
+              AND login_failures.failed_count + 1 >= 8
+           THEN CURRENT_TIMESTAMP + INTERVAL '5 minutes'
          ELSE login_failures.locked_until
        END`,
     [loginFailureKey(identifier), ipAddress || 'unknown']
