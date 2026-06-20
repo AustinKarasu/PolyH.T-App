@@ -12,5 +12,4 @@ if (require.main === module) {
   }, 30 * 1000).unref();
 }
 
-// Export for Vercel serverless
 module.exports = app;

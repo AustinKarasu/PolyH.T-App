@@ -39,7 +39,9 @@ router.post(
   [
     body('fullName').trim().isLength({ min: 2, max: 120 }),
     body('collegeId').trim().isLength({ min: 2, max: 60 }),
-    body('password').isStrongPassword({ minLength: 10, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1 }),
+    body('password')
+      .optional({ nullable: true, checkFalsy: true })
+      .isStrongPassword({ minLength: 10, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1 }),
     body('branchId').isInt({ min: 1 }),
     body('email').isEmail().normalizeEmail(),
     body('dob').isISO8601(),

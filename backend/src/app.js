@@ -27,7 +27,7 @@ app.use(globalLimiter);
 app.use(express.json({ limit: env.bodyLimit }));
 
 if (env.storage.driver === 'local') {
-  app.use('/uploads', express.static(process.env.VERCEL ? '/tmp' : path.resolve(env.uploadDir)));
+  app.use('/uploads', express.static(path.resolve(env.uploadDir)));
 }
 
 app.get('/health', (_req, res) => {

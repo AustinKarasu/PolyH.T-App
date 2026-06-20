@@ -2,7 +2,7 @@
 
 Govt. Polytechnic Kangra
 
-e-PolyPariksha HP is a combined mobile examination system for securely administering and taking house tests. It includes one Flutter APK with Admin and Student portals, a Node.js/Express REST API, a Supabase PostgreSQL database, and optional Supabase Storage/S3-compatible PDF storage.
+e-PolyPariksha HP is a combined mobile examination system for securely administering and taking house tests. It includes one Flutter APK with Admin and Student portals, a Node.js/Express REST API, PostgreSQL, and optional S3-compatible PDF storage.
 
 ## Project Structure
 
@@ -14,7 +14,7 @@ backend/              Node.js Express API
   src/                Controllers, services, middleware, routes
 docs/                 API, database, security, release, deployment docs
 website/              Public app release manifests and downloads
-.github/workflows/    CI, Vercel deploy, app release automation
+.github/workflows/    CI and app release automation
 ```
 
 ### e-PolyPariksha HP Student

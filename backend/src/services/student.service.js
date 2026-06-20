@@ -163,7 +163,7 @@ async function adminCreateStudent(payload, actingAdminId) {
   if (!Number.isInteger(semester) || semester < 1 || semester > 6) {
     throw new ApiError(422, 'Semester must be from 1 to 6');
   }
-  const dobPassword = `${String(payload.dob).slice(8, 10)}${String(payload.dob).slice(5, 7)}${String(payload.dob).slice(0, 4)}`;
+  const dobPassword = defaultDobPassword(payload.dob);
   const passwordHash = await bcrypt.hash(payload.password || dobPassword, 12);
   try {
     const rows = await query(
@@ -254,6 +254,15 @@ async function adminDeleteStudent(studentId, actingAdminId) {
   await query('DELETE FROM auth_sessions WHERE user_id = $1', [studentId]);
   await query('DELETE FROM users WHERE id = $1 AND role = $2', [studentId, 'student']);
   return student;
+}
+
+function defaultDobPassword(dob) {
+  const text = String(dob || '').trim();
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text);
+  if (iso) return `${iso[3].padStart(2, '0')}${iso[2].padStart(2, '0')}${iso[1]}`;
+  const dayFirst = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(text);
+  if (dayFirst) return `${dayFirst[1].padStart(2, '0')}${dayFirst[2].padStart(2, '0')}${dayFirst[3]}`;
+  throw new ApiError(422, 'Date of birth must be a valid date');
 }
 
 module.exports = {
