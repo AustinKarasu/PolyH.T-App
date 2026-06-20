@@ -67,7 +67,16 @@ async function login(identifier, password, context = {}) {
     }
   }
 
-  const requiresCredentialSetup = user.role === 'student' && user.must_change_credentials === true;
+  const usesDobPassword = user.role === 'student' && isDobPassword(user.dob, password);
+  const requiresCredentialSetup =
+    user.role === 'student' && (user.must_change_credentials === true || usesDobPassword);
+  if (requiresCredentialSetup && user.must_change_credentials !== true) {
+    await query(
+      'UPDATE users SET must_change_credentials = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+    user.must_change_credentials = true;
+  }
   const jti = crypto.randomUUID();
   const token = jwt.sign(
     { sub: user.id, role: user.role, branchId: user.branch_id, semester: user.semester, jti, mustChangeCredentials: requiresCredentialSetup },
@@ -401,6 +410,17 @@ function sanitizeUser(user) {
 function normalizeResetRole(role) {
   if (role !== 'admin' && role !== 'student') throw new ApiError(422, 'A valid account type is required');
   return role;
+}
+
+function isDobPassword(dob, password) {
+  if (!dob) return false;
+  const value = String(password || '').trim();
+  const date = dob instanceof Date ? dob : new Date(dob);
+  if (Number.isNaN(date.getTime())) return false;
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const year = String(date.getUTCFullYear());
+  return value === `${day}${month}${year}`;
 }
 
 function loginFailureKey(identifier) {

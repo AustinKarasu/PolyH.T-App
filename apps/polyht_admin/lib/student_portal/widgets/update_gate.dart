@@ -14,6 +14,7 @@ class UpdateGate extends StatefulWidget {
 class _UpdateGateState extends State<UpdateGate> {
   final _service = UpdateService();
   AppUpdate? _mandatoryUpdate;
+  String? _checkError;
   bool _installing = false;
 
   @override
@@ -23,22 +24,65 @@ class _UpdateGateState extends State<UpdateGate> {
   }
 
   Future<void> _check() async {
-    try {
-      final update = await _service.checkForUpdate();
-      if (mounted) {
-        setState(() {
-          _mandatoryUpdate = update?.mandatory == true ? update : null;
-        });
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final update = await _service.checkForUpdate();
+        if (mounted) {
+          setState(() {
+            _mandatoryUpdate = update?.mandatory == true ? update : null;
+            _checkError = null;
+          });
+        }
+        return;
+      } catch (err) {
+        if (mounted) {
+          setState(() => _checkError =
+              'Update check failed. Retrying when network is available.');
+        }
+        if (attempt < 2) {
+          await Future<void>.delayed(const Duration(seconds: 5));
+        }
       }
-    } catch (_) {
-      // Update checks should never block opening the app.
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final update = _mandatoryUpdate;
-    if (update == null) return widget.child;
+    if (update == null) {
+      return Stack(
+        children: [
+          widget.child,
+          if (_checkError != null)
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Material(
+                color: Colors.transparent,
+                child: SafeArea(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        _checkError!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
 
     return PopScope(
       canPop: false,

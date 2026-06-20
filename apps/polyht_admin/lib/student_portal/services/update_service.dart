@@ -28,7 +28,8 @@ class AppUpdate {
   final bool mandatory;
 
   bool get usesPlayStore => playStoreUrl.isNotEmpty;
-  String get actionLabel => usesPlayStore ? 'Update on Play Store' : 'Install update';
+  String get actionLabel =>
+      usesPlayStore ? 'Update on Play Store' : 'Install update';
   String get fallbackMessage => usesPlayStore
       ? 'A newer Play Store build is ready to install.'
       : 'A newer APK is ready to install.';
@@ -59,20 +60,42 @@ class UpdateService {
   Future<AppUpdate?> checkForUpdate() async {
     final packageInfo = await PackageInfo.fromPlatform();
     final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
-    final response = await http
-        .get(Uri.parse(UpdateConfig.manifestUrl))
-        .timeout(const Duration(seconds: 2));
-    if (response.statusCode >= 400) {
-      throw Exception('Unable to check for updates');
-    }
-    final update =
-        AppUpdate.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    final update = await _fetchUpdateManifest();
     if (update.latestBuild > 0) {
       return update.latestBuild > currentBuild ? update : null;
     }
     return _isNewerVersion(update.latestVersion, packageInfo.version)
         ? update
         : null;
+  }
+
+  Future<AppUpdate> _fetchUpdateManifest() async {
+    Object? lastError;
+    final urls = <String>{
+      UpdateConfig.manifestUrl,
+      UpdateConfig.fallbackManifestUrl,
+    }.where((url) => url.trim().isNotEmpty);
+
+    for (final url in urls) {
+      try {
+        final uri = Uri.parse(url).replace(queryParameters: {
+          ...Uri.parse(url).queryParameters,
+          't': DateTime.now().millisecondsSinceEpoch.toString(),
+        });
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 10));
+        if (response.statusCode >= 400) {
+          lastError = 'Update manifest returned ${response.statusCode}';
+          continue;
+        }
+        return AppUpdate.fromJson(
+            jsonDecode(response.body) as Map<String, dynamic>);
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    throw Exception('Unable to check for updates: $lastError');
   }
 
   Future<void> openUpdate(AppUpdate update) async {
