@@ -126,6 +126,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> requestEmailChangeOtp(String email) => _authService.requestEmailChangeOtp(email);
+  Future<void> requestPasswordChangeOtp() => _authService.requestPasswordChangeOtp();
+  Future<void> changePassword({required String currentPassword, required String newPassword, required String emailOtpCode, String? totpCode}) => _authService.changePassword(currentPassword: currentPassword, newPassword: newPassword, emailOtpCode: emailOtpCode, totpCode: totpCode);
 
   Future<void> uploadProfilePhoto({
     String? imagePath,

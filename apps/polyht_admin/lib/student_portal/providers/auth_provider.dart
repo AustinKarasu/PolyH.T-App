@@ -98,13 +98,16 @@ class AuthProvider extends ChangeNotifier {
     required String currentPassword,
     required String newPassword,
     String? totpCode,
+    required String emailOtpCode,
   }) async {
     await _authService.changePassword(
       currentPassword: currentPassword,
       newPassword: newPassword,
       totpCode: totpCode,
+      emailOtpCode: emailOtpCode,
     );
   }
+  Future<void> requestPasswordChangeOtp() => _authService.requestPasswordChangeOtp();
 
   Future<Map<String, dynamic>> setupTwoFactor() => _authService.setupTwoFactor();
 

@@ -50,6 +50,10 @@ async function requestEmailChangeOtp(req, res, next) {
   }
 }
 
+async function requestPasswordChangeOtp(req, res, next) {
+  try { res.json(await authService.requestPasswordChangeOtp(req.user.sub)); } catch (err) { next(err); }
+}
+
 async function updateMe(req, res, next) {
   try {
     const user = await authService.updateCurrentUser(req.user.sub, req.body);
@@ -73,7 +77,8 @@ async function changePassword(req, res, next) {
     await authService.changeCurrentUserPassword(req.user.sub, {
       currentPassword: req.body.currentPassword,
       newPassword: req.body.newPassword,
-      totpCode: req.body.totpCode
+      totpCode: req.body.totpCode,
+      emailOtpCode: req.body.emailOtpCode
     });
     res.status(204).send();
   } catch (err) {
@@ -121,6 +126,7 @@ module.exports = {
   login,
   requestAdminRegistrationOtp,
   requestEmailChangeOtp,
+  requestPasswordChangeOtp,
   registerAdmin,
   me,
   updateMe,

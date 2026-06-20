@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS otp_security (
   PRIMARY KEY (email, purpose)
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS biometric_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS email_notifications (
   id SERIAL PRIMARY KEY,
   event_key VARCHAR(255) NOT NULL UNIQUE,

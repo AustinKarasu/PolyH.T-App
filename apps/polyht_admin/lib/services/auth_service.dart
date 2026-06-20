@@ -103,6 +103,12 @@ class AuthService {
     await _apiClient.post('/auth/me/email-otp', {'email': email});
   }
 
+  Future<void> requestPasswordChangeOtp() => _apiClient.post('/auth/me/password-otp', {});
+
+  Future<void> changePassword({required String currentPassword, required String newPassword, required String emailOtpCode, String? totpCode}) async {
+    await _apiClient.post('/auth/me/password', {'currentPassword': currentPassword, 'newPassword': newPassword, 'emailOtpCode': emailOtpCode, if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode});
+  }
+
   Future<AppUser> uploadProfilePhoto({
     String? imagePath,
     List<int>? imageBytes,

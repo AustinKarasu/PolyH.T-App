@@ -54,6 +54,7 @@ router.post(
 
 router.get('/me', authenticate, authController.me);
 router.post('/me/email-otp', authenticate, [body('email').isEmail().normalizeEmail()], validate, authController.requestEmailChangeOtp);
+router.post('/me/password-otp', authenticate, authController.requestPasswordChangeOtp);
 router.patch(
   '/me',
   authenticate,
@@ -81,7 +82,8 @@ router.post(
       minNumbers: 1,
       minSymbols: 1
     }),
-    body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 })
+    body('totpCode').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 6, max: 8 }),
+    body('emailOtpCode').trim().isLength({ min: 6, max: 8 })
   ],
   validate,
   authController.changePassword

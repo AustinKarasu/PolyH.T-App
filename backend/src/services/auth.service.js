@@ -6,11 +6,13 @@ const { env } = require('../config/env');
 const { ApiError } = require('../utils/api-error');
 const storageService = require('./storage.service');
 const emailOtpService = require('./email-otp.service');
+const notificationService = require('./notification.service');
 
 const OTP_PURPOSES = {
   adminLogin: 'admin_login',
   adminRegister: 'admin_register',
-  emailChange: 'email_change'
+  emailChange: 'email_change',
+  passwordChange: 'password_change'
 };
 
 async function login(identifier, password, context = {}) {
@@ -211,14 +213,23 @@ async function updateCurrentUserPhoto(userId, file) {
   return getCurrentUser(userId);
 }
 
-async function changeCurrentUserPassword(userId, { currentPassword, newPassword, totpCode }) {
+async function requestPasswordChangeOtp(userId) {
+  const rows = await query('SELECT email FROM users WHERE id = $1 AND is_active = true LIMIT 1', [userId]);
+  if (!rows[0]?.email) throw new ApiError(422, 'An email address is required to change your password');
+  await emailOtpService.sendOtp(rows[0].email, OTP_PURPOSES.passwordChange, 'e-PolyPariksha HP password change verification code');
+  return { status: 'sent' };
+}
+
+async function changeCurrentUserPassword(userId, { currentPassword, newPassword, totpCode, emailOtpCode }) {
   const rows = await query(
-    `SELECT id, password_hash, two_factor_enabled, two_factor_secret
+    `SELECT id, email, full_name, password_hash, two_factor_enabled, two_factor_secret
      FROM users WHERE id = $1 AND is_active = true LIMIT 1`,
     [userId]
   );
   const user = rows[0];
   if (!user) throw new ApiError(401, 'User account is inactive or no longer exists');
+  if (!emailOtpCode) throw new ApiError(428, 'Verify the email OTP before changing your password');
+  await emailOtpService.verifyOtp(user.email, OTP_PURPOSES.passwordChange, emailOtpCode);
   if (user.two_factor_enabled && !verifyTotp(totpCode, user.two_factor_secret)) {
     throw new ApiError(422, 'Invalid authenticator code');
   }
@@ -300,6 +311,7 @@ async function assertLoginAllowed(identifier, ipAddress = '') {
      WHERE identifier_hash = $1 AND ip_address = $2 AND locked_until <= CURRENT_TIMESTAMP`,
     [loginFailureKey(identifier), ipAddress || 'unknown']
   );
+  await notificationService.notifySecurityEvent(user, 'password_changed');
   const rows = await query(
     `SELECT locked_until
      FROM login_failures
@@ -349,6 +361,7 @@ module.exports = {
   login,
   requestAdminRegistrationOtp,
   requestEmailChangeOtp,
+  requestPasswordChangeOtp,
   registerAdmin,
   getCurrentUser,
   updateCurrentUser,

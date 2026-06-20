@@ -66,6 +66,7 @@ class SettingsScreen extends StatelessWidget {
     final next = TextEditingController();
     final confirm = TextEditingController();
     final code = TextEditingController();
+    final emailOtp = TextEditingController();
     final twoFactorEnabled = auth.user?.twoFactorEnabled == true;
     final ok = await showDialog<bool>(
       context: context,
@@ -82,6 +83,15 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 12),
               TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Authenticator code')),
             ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailOtp,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'Email OTP', suffixIcon: IconButton(tooltip: 'Send email OTP', icon: const Icon(Icons.send_outlined), onPressed: () async {
+                await auth.requestPasswordChangeOtp();
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password-change OTP sent to your email')));
+              })),
+            ),
           ]),
         ),
         actions: [
@@ -95,6 +105,7 @@ class SettingsScreen extends StatelessWidget {
       next.dispose();
       confirm.dispose();
       code.dispose();
+      emailOtp.dispose();
       return;
     }
     if (!context.mounted) {
@@ -102,6 +113,7 @@ class SettingsScreen extends StatelessWidget {
       next.dispose();
       confirm.dispose();
       code.dispose();
+      emailOtp.dispose();
       return;
     }
 
@@ -116,6 +128,7 @@ class SettingsScreen extends StatelessWidget {
           currentPassword: current.text,
           newPassword: next.text,
           totpCode: code.text.trim(),
+          emailOtpCode: emailOtp.text.trim(),
         );
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed')));
@@ -130,6 +143,7 @@ class SettingsScreen extends StatelessWidget {
     next.dispose();
     confirm.dispose();
     code.dispose();
+    emailOtp.dispose();
   }
 
   Future<void> _enable(BuildContext context) async {

@@ -91,13 +91,17 @@ class AuthService {
     required String currentPassword,
     required String newPassword,
     String? totpCode,
+    required String emailOtpCode,
   }) async {
     await _apiClient.post('/auth/me/password', {
       'currentPassword': currentPassword,
       'newPassword': newPassword,
       if (totpCode != null && totpCode.isNotEmpty) 'totpCode': totpCode,
+      'emailOtpCode': emailOtpCode,
     });
   }
+
+  Future<void> requestPasswordChangeOtp() => _apiClient.post('/auth/me/password-otp', {});
 
   Future<Map<String, dynamic>> setupTwoFactor() async {
     return await _apiClient.post('/auth/2fa/setup', {}) as Map<String, dynamic>;

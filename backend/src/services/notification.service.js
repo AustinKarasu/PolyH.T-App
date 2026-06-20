@@ -103,9 +103,25 @@ async function notifyTest(test, eventType) {
 
 async function notifyAppUpdate(version, actingAdminId) {
   const admins = await query(`SELECT email FROM users WHERE role = 'admin' AND is_active = TRUE AND email IS NOT NULL`);
+  const students = await query(`SELECT email FROM users WHERE role = 'student' AND is_active = TRUE AND email IS NOT NULL`);
   const html = emailHtml({ heading: 'App update available', intro: `e-PolyPariksha HP version ${version} is now available.`, action: 'Open the app and use the update option when prompted.' });
   await Promise.allSettled(admins.map((row) => markAndSend({ eventType: `app_update_${version}`, email: row.email, subject: 'e-PolyPariksha HP: App update available', html })));
+  await Promise.allSettled(students.map((row) => markAndSend({ eventType: `student_app_update_${version}`, email: row.email, subject: 'e-PolyPariksha HP: App update available', html })));
   return { notifiedBy: actingAdminId, version };
+}
+
+async function notifySecurityEvent(user, event, detail) {
+  if (!user?.email) return;
+  const labels = {
+    password_changed: 'Password changed',
+    two_factor_enabled: 'Two-factor authentication enabled',
+    two_factor_disabled: 'Two-factor authentication disabled',
+    biometric_enabled: 'Biometric sign-in enabled',
+    biometric_disabled: 'Biometric sign-in disabled'
+  };
+  const heading = labels[event] || 'Account security updated';
+  const html = emailHtml({ heading, intro: `A security setting was changed for your e-PolyPariksha HP account${detail ? `: ${detail}` : '.'}`, action: 'If you did not make this change, change your password and contact your institution immediately.' });
+  await markAndSend({ eventType: `${event}_${Date.now()}`, email: user.email, subject: `e-PolyPariksha HP: ${heading}`, html });
 }
 
 async function processTestNotifications() {
@@ -116,4 +132,4 @@ async function processTestNotifications() {
   }
 }
 
-module.exports = { notifyTest, notifyAppUpdate, processTestNotifications };
+module.exports = { notifyTest, notifyAppUpdate, notifySecurityEvent, processTestNotifications };
