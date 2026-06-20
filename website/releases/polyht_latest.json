@@ -1,10 +1,10 @@
 {
     "appId":  "epolypariksha-hp",
-    "latestVersion":  "1.0.3",
-    "latestBuild":  58,
+    "latestVersion":  "1.0.4",
+    "latestBuild":  59,
     "mandatory":  true,
     "releaseNotes":  "e-PolyPariksha HP update:\n- Admin sign-in now uses email OTP verification.\n- Admin registration now verifies the email account with OTP.\n- Making another admin primary now requires email OTP verification.\n- New student accounts can use date of birth as the default password in DDMMYYYY format.\n- Update checks now use the app build number so the latest app does not keep asking to update.",
-    "downloadUrl":  "https://github.com/AustinKarasu/e-PolyPariksha/releases/download/v1.0/epolypariksha-hp-v1.0-build58.apk",
+    "downloadUrl":  "http://150.242.202.246/downloads/epolypariksha-hp-v1.0-build59.apk",
     "packageName":  "in.polyht.polyht_admin",
     "usePlayStore":  false,
     "playStoreUrl":  ""

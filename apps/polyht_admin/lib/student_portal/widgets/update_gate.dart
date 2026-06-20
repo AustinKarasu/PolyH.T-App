@@ -14,6 +14,7 @@ class UpdateGate extends StatefulWidget {
 class _UpdateGateState extends State<UpdateGate> {
   final _service = UpdateService();
   AppUpdate? _mandatoryUpdate;
+  bool _installing = false;
 
   @override
   void initState() {
@@ -61,13 +62,21 @@ class _UpdateGateState extends State<UpdateGate> {
                 ),
                 const SizedBox(height: 20),
                 FilledButton.icon(
-                  onPressed: () => _service.openUpdate(update),
-                  icon: Icon(update.usesPlayStore
-                      ? Icons.shop_rounded
-                      : Icons.download_rounded),
-                  label: Text(update.usesPlayStore
-                      ? 'Update on Play Store'
-                      : 'Download ${update.latestVersion}'),
+                  onPressed: _installing ? null : () => _install(update),
+                  icon: _installing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(update.usesPlayStore
+                          ? Icons.shop_rounded
+                          : Icons.download_rounded),
+                  label: Text(_installing
+                      ? 'Downloading...'
+                      : update.usesPlayStore
+                          ? 'Update on Play Store'
+                          : 'Download ${update.latestVersion}'),
                 ),
               ],
             ),
@@ -75,5 +84,19 @@ class _UpdateGateState extends State<UpdateGate> {
         ),
       ),
     );
+  }
+
+  Future<void> _install(AppUpdate update) async {
+    setState(() => _installing = true);
+    try {
+      await _service.openUpdate(update);
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(err.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _installing = false);
+    }
   }
 }

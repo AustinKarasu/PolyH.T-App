@@ -4,7 +4,7 @@ const { ApiError } = require('../utils/api-error');
 const authService = require('./auth.service');
 const emailOtpService = require('./email-otp.service');
 
-const PRIMARY_ADMIN_EMAIL = 'admin@gpkangra.gov.in';
+const PRIMARY_ADMIN_EMAIL = 'aayankarasu@gmail.com';
 
 async function listAdmins(actingAdminId) {
   await requirePrimaryAdmin(actingAdminId);
