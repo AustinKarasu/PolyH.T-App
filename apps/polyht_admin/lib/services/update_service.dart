@@ -67,8 +67,10 @@ class UpdateService {
     }
     final update =
         AppUpdate.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-    return update.latestBuild > currentBuild ||
-            _isNewerVersion(update.latestVersion, packageInfo.version)
+    if (update.latestBuild > 0) {
+      return update.latestBuild > currentBuild ? update : null;
+    }
+    return _isNewerVersion(update.latestVersion, packageInfo.version)
         ? update
         : null;
   }
