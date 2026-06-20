@@ -24,6 +24,7 @@ class _TestListScreenState extends State<TestListScreen> {
   final _service = TestService();
   late Future<List<StudentTest>> _tests;
   Timer? _refreshTimer;
+  bool _credentialDialogShowing = false;
 
   @override
   void initState() {
@@ -32,6 +33,8 @@ class _TestListScreenState extends State<TestListScreen> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       unawaited(_refreshTestsSilently());
     });
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkCredentialSetup());
   }
 
   Future<List<StudentTest>> _loadTests() async {
@@ -54,6 +57,201 @@ class _TestListScreenState extends State<TestListScreen> {
       }
     } catch (_) {}
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkCredentialSetup());
+  }
+
+  Future<void> _checkCredentialSetup() async {
+    if (!mounted || _credentialDialogShowing) return;
+    final auth = context.read<AuthProvider>();
+    if (auth.requiresCredentialSetup != true) return;
+    _credentialDialogShowing = true;
+    try {
+      await _showCredentialSetupDialog(auth);
+    } finally {
+      _credentialDialogShowing = false;
+    }
+  }
+
+  Future<void> _showCredentialSetupDialog(AuthProvider auth) async {
+    final email = TextEditingController(text: auth.user?.email?.trim() ?? '');
+    final otp = TextEditingController();
+    final password = TextEditingController();
+    final confirmPassword = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    var sendingOtp = false;
+    var saving = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Secure your student account'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Your account is still using the date-of-birth password. Verify your email, then create a private password before continuing.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email address',
+                      suffixIcon: IconButton(
+                        tooltip: 'Send OTP',
+                        icon: sendingOtp
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send_outlined),
+                        onPressed: sendingOtp
+                            ? null
+                            : () async {
+                                final targetEmail = email.text.trim();
+                                if (!_validEmail(targetEmail)) {
+                                  ScaffoldMessenger.of(dialogContext)
+                                      .showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Enter a valid email address')),
+                                  );
+                                  return;
+                                }
+                                setDialogState(() => sendingOtp = true);
+                                try {
+                                  await auth.requestInitialCredentialsOtp(
+                                      targetEmail);
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(dialogContext)
+                                        .showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('OTP sent to this email')),
+                                    );
+                                  }
+                                } catch (err) {
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(dialogContext)
+                                        .showSnackBar(
+                                      SnackBar(content: Text(_cleanError(err))),
+                                    );
+                                  }
+                                } finally {
+                                  if (dialogContext.mounted) {
+                                    setDialogState(() => sendingOtp = false);
+                                  }
+                                }
+                              },
+                      ),
+                    ),
+                    validator: (value) => _validEmail(value ?? '')
+                        ? null
+                        : 'Enter a valid email address',
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: otp,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Email OTP'),
+                    validator: (value) => (value ?? '').trim().length >= 6
+                        ? null
+                        : 'Enter the email OTP',
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: password,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(labelText: 'New password'),
+                    validator: (value) => _passwordError(value ?? ''),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: confirmPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                        labelText: 'Confirm new password'),
+                    validator: (value) => value == password.text
+                        ? null
+                        : 'Passwords do not match',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => saving = true);
+                      try {
+                        await auth.completeInitialCredentials(
+                          email.text.trim(),
+                          otp.text.trim(),
+                          password.text,
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      } catch (err) {
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text(_cleanError(err))),
+                          );
+                        }
+                      } finally {
+                        if (dialogContext.mounted) {
+                          setDialogState(() => saving = false);
+                        }
+                      }
+                    },
+              child: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Save and continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+    email.dispose();
+    otp.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+  }
+
+  bool _validEmail(String value) =>
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim());
+
+  String? _passwordError(String value) {
+    if (value.length < 10) return 'Use at least 10 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Add an uppercase letter';
+    if (!RegExp(r'[a-z]').hasMatch(value)) return 'Add a lowercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Add a number';
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) return 'Add a symbol';
+    return null;
+  }
+
+  String _cleanError(Object err) =>
+      err.toString().replaceFirst('Exception: ', '');
 
   @override
   Widget build(BuildContext context) {

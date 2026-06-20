@@ -30,10 +30,12 @@ class AuthProvider extends ChangeNotifier {
       try {
         user = await _authService.me();
         requiresTwoFactor = false;
+        requiresCredentialSetup = user?.mustChangeCredentials == true;
       } catch (_) {
         await _tokenStorage.clear();
         user = null;
         requiresTwoFactor = false;
+        requiresCredentialSetup = false;
       }
     }
     isLoading = false;
@@ -51,6 +53,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       user = await _authService.login(identifier, password, totpCode: totpCode);
       requiresTwoFactor = false;
+      requiresCredentialSetup = user?.mustChangeCredentials == true;
     } on TwoFactorRequiredException catch (err) {
       requiresTwoFactor = true;
       error = err.toString();
@@ -94,8 +97,15 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> requestEmailChangeOtp(String email) =>
       _authService.requestEmailChangeOtp(email);
-  Future<void> requestInitialCredentialsOtp(String email) => _authService.requestInitialCredentialsOtp(email);
-  Future<void> completeInitialCredentials(String email, String otp, String password) async { user = await _authService.completeInitialCredentials(email, otp, password); requiresCredentialSetup = false; notifyListeners(); }
+  Future<void> requestInitialCredentialsOtp(String email) =>
+      _authService.requestInitialCredentialsOtp(email);
+  Future<void> completeInitialCredentials(
+      String email, String otp, String password) async {
+    user = await _authService.completeInitialCredentials(email, otp, password);
+    requiresCredentialSetup = false;
+    notifyListeners();
+  }
+
   Future<void> requestPasswordReset(String email, String role) =>
       _authService.requestPasswordReset(email, role);
   Future<String> verifyPasswordReset(

@@ -8,7 +8,8 @@ const STUDENT_SELECT = `
   SELECT u.id, u.full_name, u.email, u.college_id, u.role, u.branch_id,
          u.dob, u.semester, u.roll_no, u.board_roll_no, u.college_name,
          u.course_name, u.guardian_name, u.phone, u.address,
-         u.admission_year, u.dropout_year, u.photo_url, u.is_active, u.two_factor_enabled, u.created_at,
+         u.admission_year, u.dropout_year, u.photo_url, u.is_active, u.two_factor_enabled,
+         u.must_change_credentials, u.created_at,
          u.created_by_admin_id,
          b.name AS branch_name, b.code AS branch_code
   FROM users u
