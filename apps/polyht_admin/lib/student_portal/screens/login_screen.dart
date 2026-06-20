@@ -339,13 +339,9 @@ class _LoginScreenState extends State<LoginScreen>
       });
     } else if (mounted && auth.isAuthenticated) {
       if (auth.requiresCredentialSetup) {
-        // Login updates the root route at the same time as this screen is
-        // completing. Wait for that rebuild before attaching a modal route.
-        // The test-list screen has the same gate for restored sessions.
-        await Future<void>.delayed(Duration.zero);
-        if (mounted && auth.requiresCredentialSetup) {
-          await _showInitialCredentials(context, identifier);
-        }
+        // The authenticated test screen owns this mandatory dialog. Showing it
+        // here as well races with that screen and can leave a stale second modal.
+        Navigator.of(context).popUntil((route) => route.isFirst);
       } else {
         await _saveOrClearCredentials(identifier, password);
         if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
@@ -353,6 +349,9 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  // Kept for the login-only credential-save preference flow; the mandatory
+  // dialog itself is owned by the authenticated test screen.
+  // ignore: unused_element
   Future<void> _showInitialCredentials(
       BuildContext context, String identifier) {
     final auth = context.read<AuthProvider>();
