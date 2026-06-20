@@ -1,4 +1,5 @@
 const adminService = require('../services/admin.service');
+const appErrorService = require('../services/app-error.service');
 
 async function listAdmins(req, res, next) {
   try {
@@ -13,6 +14,26 @@ async function listApplications(req, res, next) {
   try {
     const applications = await adminService.listApplications(req.user.sub);
     res.json({ applications });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function analytics(req, res, next) {
+  try {
+    const analytics = await appErrorService.analyticsSummary(req.user);
+    res.json({ analytics });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function appErrors(req, res, next) {
+  try {
+    const reports = await appErrorService.listAppErrors(req.user, {
+      limit: req.query.limit
+    });
+    res.json({ reports });
   } catch (err) {
     next(err);
   }
@@ -122,6 +143,8 @@ async function clearData(req, res, next) {
 module.exports = {
   listAdmins,
   listApplications,
+  analytics,
+  appErrors,
   createAdmin,
   requestCreateAdminOtp,
   notifyAppUpdate,

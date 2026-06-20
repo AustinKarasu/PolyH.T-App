@@ -1,4 +1,5 @@
 import '../models/admin_account.dart';
+import '../models/admin_analytics.dart';
 import '../models/admin_application.dart';
 import '../models/app_user.dart';
 import 'api_client.dart';
@@ -75,6 +76,18 @@ class AdminService {
 
   Future<void> requestCreateAdminOtp() async {
     await _apiClient.post('/admins/request-create-otp', {});
+  }
+
+  Future<AdminAnalytics> fetchAnalytics() async {
+    final data = await _apiClient.get('/admins/analytics');
+    return AdminAnalytics.fromJson(data['analytics'] as Map<String, dynamic>);
+  }
+
+  Future<List<AppErrorReport>> fetchAppErrors({int limit = 50}) async {
+    final data = await _apiClient.get('/admins/app-errors?limit=$limit');
+    return (data['reports'] as List)
+        .map((item) => AppErrorReport.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> setActive(int adminId, bool isActive) async {

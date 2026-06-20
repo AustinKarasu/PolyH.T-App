@@ -8,6 +8,8 @@ router.use(authenticate, requireRole('admin'));
 
 router.get('/', adminController.listAdmins);
 router.get('/applications', adminController.listApplications);
+router.get('/analytics', adminController.analytics);
+router.get('/app-errors', adminController.appErrors);
 router.post('/request-create-otp', adminController.requestCreateAdminOtp);
 router.post('/app-update', [body('version').trim().isLength({ min: 1, max: 40 })], validate, adminController.notifyAppUpdate);
 const adminId = [param('id').isInt({ min: 1 })];

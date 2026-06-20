@@ -350,6 +350,7 @@ class _LoginScreenState extends State<LoginScreen>
       });
     } else if (mounted && auth.isAuthenticated) {
       await _saveOrClearCredentials(identifier, password);
+      if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }

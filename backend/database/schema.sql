@@ -191,12 +191,30 @@ CREATE TABLE IF NOT EXISTS admin_trusted_devices (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, device_key)
 );
+
+CREATE TABLE IF NOT EXISTS app_error_reports (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE SET NULL,
+  severity VARCHAR(20) NOT NULL DEFAULT 'error' CHECK (severity IN ('error', 'crash')),
+  source VARCHAR(40) NOT NULL DEFAULT 'flutter',
+  page VARCHAR(120),
+  message TEXT NOT NULL,
+  stack_trace TEXT,
+  device_platform VARCHAR(80),
+  device_model VARCHAR(160),
+  app_version VARCHAR(40),
+  app_build VARCHAR(40),
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE INDEX IF NOT EXISTS idx_email_otps_lookup ON email_otps (email, purpose, expires_at);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens (user_id, expires_at);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_test ON email_notifications (test_id, event_type);
 CREATE INDEX IF NOT EXISTS idx_users_created_by_admin ON users(created_by_admin_id);
 CREATE INDEX IF NOT EXISTS idx_tests_created_by ON tests(created_by);
 CREATE INDEX IF NOT EXISTS idx_admin_applications_status ON admin_applications(status);
+CREATE INDEX IF NOT EXISTS idx_app_error_reports_created ON app_error_reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_app_error_reports_user ON app_error_reports(user_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_one_primary_admin
   ON users (role)

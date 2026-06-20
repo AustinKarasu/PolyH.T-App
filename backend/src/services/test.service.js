@@ -110,14 +110,15 @@ async function listStudentHistory(user) {
                 THEN EXTRACT(EPOCH FROM (a.last_seen_at - a.started_at))::INT
               ELSE NULL
             END AS active_seconds
-     FROM tests t
+     FROM test_attempts a
+     JOIN tests t ON t.id = a.test_id
      JOIN users u ON u.id = $1
-     LEFT JOIN test_attempts a ON a.test_id = t.id AND a.student_id = $1
      WHERE t.branch_id = $2
        AND t.semester = $3
        AND (u.created_by_admin_id IS NULL OR t.created_by = u.created_by_admin_id)
        AND t.scheduled_end < CURRENT_TIMESTAMP
        AND t.scheduled_end >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+       AND t.deleted_at IS NULL
      ORDER BY t.scheduled_end DESC, t.scheduled_start DESC`,
     [user.sub, user.branchId, user.semester]
   );

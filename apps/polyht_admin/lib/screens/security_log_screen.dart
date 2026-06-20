@@ -86,71 +86,127 @@ class _EventList extends StatelessWidget {
             : isWarning
                 ? AppTheme.accent
                 : AppTheme.primary;
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
+        return Material(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          child: InkWell(
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(color: color.withValues(alpha: 0.18)),
-          ),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            leading: Container(
-              width: 36,
-              height: 36,
+            onTap: () => _showEventDetails(context, event),
+            child: Container(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(color: color.withValues(alpha: 0.18)),
               ),
-              child: Icon(
-                event.eventType == 'submit_completed'
-                    ? Icons.assignment_turned_in_outlined
-                    : isCritical
-                        ? Icons.error_outline
-                        : isWarning
-                            ? Icons.warning_amber_rounded
-                            : Icons.info_outline,
-                size: 20,
-                color: color,
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    event.eventType == 'submit_completed'
+                        ? Icons.assignment_turned_in_outlined
+                        : isCritical
+                            ? Icons.error_outline
+                            : isWarning
+                                ? Icons.warning_amber_rounded
+                                : Icons.info_outline,
+                    size: 20,
+                    color: color,
+                  ),
+                ),
+                title: Text(
+                  '${_labelFor(event.eventType)} - ${event.studentName}',
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${event.branchName} - ${event.testTitle}\n${event.studentEmail ?? 'Email not available'}\n${event.message ?? ''}',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.65)),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                trailing: SizedBox(
+                  width: 86,
+                  child: Text(
+                    format.format(event.createdAt),
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.55)),
+                  ),
+                ),
+                isThreeLine: true,
               ),
             ),
-            title: Text(
-              '${_labelFor(event.eventType)} - ${event.studentName}',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${event.branchName} - ${event.testTitle}\n${event.studentEmail ?? 'Email not available'}\n${event.message ?? ''}',
-                style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.color
-                        ?.withValues(alpha: 0.65)),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            trailing: SizedBox(
-              width: 86,
-              child: Text(
-                format.format(event.createdAt),
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.color
-                        ?.withValues(alpha: 0.55)),
-              ),
-            ),
-            isThreeLine: true,
           ),
+        );
+      },
+    );
+  }
+
+  void _showEventDetails(BuildContext context, ExamEvent event) {
+    final format = DateFormat('dd MMM yyyy, hh:mm:ss a');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.72,
+          minChildSize: 0.42,
+          maxChildSize: 0.92,
+          builder: (context, controller) {
+            return ListView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              children: [
+                Text(
+                  _labelFor(event.eventType),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 14),
+                _EventDetailRow('Student', event.studentName),
+                _EventDetailRow(
+                    'Email', event.studentEmail ?? 'Email not available'),
+                _EventDetailRow(
+                    'College ID', event.collegeId ?? 'Not available'),
+                _EventDetailRow('Branch', event.branchName),
+                _EventDetailRow('Test', event.testTitle),
+                _EventDetailRow('Event type', event.eventType),
+                _EventDetailRow('Severity', event.severity),
+                _EventDetailRow('Time', format.format(event.createdAt)),
+                _EventDetailRow(
+                    'Description',
+                    event.message?.trim().isNotEmpty == true
+                        ? event.message!
+                        : 'No additional description recorded.'),
+              ],
+            );
+          },
         );
       },
     );
@@ -169,5 +225,38 @@ class _EventList extends StatelessWidget {
       default:
         return eventType.replaceAll('_', ' ');
     }
+  }
+}
+
+class _EventDetailRow extends StatelessWidget {
+  const _EventDetailRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.color
+                  ?.withValues(alpha: 0.58),
+            ),
+          ),
+          const SizedBox(height: 3),
+          SelectableText(value, style: const TextStyle(fontSize: 13)),
+        ],
+      ),
+    );
   }
 }

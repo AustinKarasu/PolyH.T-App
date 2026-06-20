@@ -18,7 +18,9 @@ class SavedAdminCredentialsService {
     if (identifier == null ||
         identifier.trim().isEmpty ||
         password == null ||
-        password.isEmpty) return null;
+        password.isEmpty) {
+      return null;
+    }
     return SavedAdminCredentials(identifier: identifier, password: password);
   }
 

@@ -7,6 +7,7 @@ const branchRoutes = require('./routes/branch.routes');
 const testRoutes = require('./routes/test.routes');
 const attemptRoutes = require('./routes/attempt.routes');
 const studentRoutes = require('./routes/student.routes');
+const appErrorRoutes = require('./routes/app-error.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 const {
   compression,
@@ -40,6 +41,7 @@ app.use('/api/branches', branchRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/attempts', attemptRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/api/app-errors', appErrorRoutes);
 app.use(errorHandler);
 
 module.exports = app;
