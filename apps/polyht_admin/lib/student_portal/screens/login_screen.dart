@@ -363,7 +363,9 @@ class _LoginScreenState extends State<LoginScreen>
     final formKey = GlobalKey<FormState>();
     var saveCredentials = _saveCredentials;
     var sendingOtp = false;
+    var otpSent = false;
     var saving = false;
+    String? submitError;
 
     return showDialog<void>(
       context: context,
@@ -390,6 +392,9 @@ class _LoginScreenState extends State<LoginScreen>
                       keyboardType: TextInputType.emailAddress,
                       decoration:
                           const InputDecoration(labelText: 'Email address'),
+                      onChanged: (_) {
+                        if (otpSent) setDialogState(() => otpSent = false);
+                      },
                       validator: (value) => _isValidEmail(value ?? '')
                           ? null
                           : 'Enter a valid email address',
@@ -414,16 +419,15 @@ class _LoginScreenState extends State<LoginScreen>
                                   await auth.requestInitialCredentialsOtp(
                                       targetEmail);
                                   if (dialogContext.mounted) {
-                                    ScaffoldMessenger.of(dialogContext)
-                                        .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                'OTP sent to this email')));
+                                    setDialogState(() {
+                                      otpSent = true;
+                                      submitError = null;
+                                    });
                                   }
                                 } catch (err) {
                                   if (dialogContext.mounted) {
-                                    ScaffoldMessenger.of(dialogContext)
-                                        .showSnackBar(SnackBar(
-                                            content: Text(_cleanError(err))));
+                                    setDialogState(
+                                        () => submitError = _cleanError(err));
                                   }
                                 } finally {
                                   if (dialogContext.mounted) {
@@ -441,6 +445,12 @@ class _LoginScreenState extends State<LoginScreen>
                         label: Text(sendingOtp ? 'Sending OTP' : 'Send OTP'),
                       ),
                     ),
+                    if (otpSent) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                          'OTP sent. Check this email, including spam or junk.',
+                          style: Theme.of(dialogContext).textTheme.bodySmall),
+                    ],
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: otp,
@@ -480,6 +490,11 @@ class _LoginScreenState extends State<LoginScreen>
                       title: const Text('Save new login details'),
                       subtitle: const Text('Use only on your personal device.'),
                     ),
+                    if (submitError != null)
+                      Text(submitError!,
+                          style: TextStyle(
+                              color:
+                                  Theme.of(dialogContext).colorScheme.error)),
                   ],
                 ),
               ),
@@ -489,7 +504,13 @@ class _LoginScreenState extends State<LoginScreen>
                 onPressed: saving
                     ? null
                     : () async {
+                        if (!otpSent) {
+                          setDialogState(() => submitError =
+                              'Send an OTP to your new email before continuing.');
+                          return;
+                        }
                         if (!formKey.currentState!.validate()) return;
+                        setDialogState(() => submitError = null);
                         setDialogState(() => saving = true);
                         try {
                           await auth.completeInitialCredentials(
@@ -507,9 +528,8 @@ class _LoginScreenState extends State<LoginScreen>
                           }
                         } catch (err) {
                           if (dialogContext.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(_cleanError(err))),
-                            );
+                            setDialogState(
+                                () => submitError = _cleanError(err));
                           }
                         } finally {
                           if (dialogContext.mounted) {

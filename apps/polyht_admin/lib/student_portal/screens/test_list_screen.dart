@@ -85,7 +85,9 @@ class _TestListScreenState extends State<TestListScreen> {
     final confirmPassword = TextEditingController();
     final formKey = GlobalKey<FormState>();
     var sendingOtp = false;
+    var otpSent = false;
     var saving = false;
+    String? submitError;
 
     await showDialog<void>(
       context: context,
@@ -112,6 +114,9 @@ class _TestListScreenState extends State<TestListScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration:
                           const InputDecoration(labelText: 'Email address'),
+                      onChanged: (_) {
+                        if (otpSent) setDialogState(() => otpSent = false);
+                      },
                       validator: (value) => _validEmail(value ?? '')
                           ? null
                           : 'Enter a valid email address',
@@ -136,16 +141,15 @@ class _TestListScreenState extends State<TestListScreen> {
                                   await auth.requestInitialCredentialsOtp(
                                       targetEmail);
                                   if (dialogContext.mounted) {
-                                    ScaffoldMessenger.of(dialogContext)
-                                        .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                'OTP sent to this email')));
+                                    setDialogState(() {
+                                      otpSent = true;
+                                      submitError = null;
+                                    });
                                   }
                                 } catch (err) {
                                   if (dialogContext.mounted) {
-                                    ScaffoldMessenger.of(dialogContext)
-                                        .showSnackBar(SnackBar(
-                                            content: Text(_cleanError(err))));
+                                    setDialogState(
+                                        () => submitError = _cleanError(err));
                                   }
                                 } finally {
                                   if (dialogContext.mounted) {
@@ -163,6 +167,12 @@ class _TestListScreenState extends State<TestListScreen> {
                         label: Text(sendingOtp ? 'Sending OTP' : 'Send OTP'),
                       ),
                     ),
+                    if (otpSent) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                          'OTP sent. Check this email, including spam or junk.',
+                          style: Theme.of(dialogContext).textTheme.bodySmall),
+                    ],
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: otp,
@@ -193,6 +203,11 @@ class _TestListScreenState extends State<TestListScreen> {
                           ? null
                           : 'Passwords do not match',
                     ),
+                    if (submitError != null)
+                      Text(submitError!,
+                          style: TextStyle(
+                              color:
+                                  Theme.of(dialogContext).colorScheme.error)),
                   ],
                 ),
               ),
@@ -202,8 +217,14 @@ class _TestListScreenState extends State<TestListScreen> {
                 onPressed: saving
                     ? null
                     : () async {
+                        if (!otpSent) {
+                          setDialogState(() => submitError =
+                              'Send an OTP to your new email before continuing.');
+                          return;
+                        }
                         if (!formKey.currentState!.validate()) return;
                         setDialogState(() => saving = true);
+                        setDialogState(() => submitError = null);
                         try {
                           await auth.completeInitialCredentials(
                             email.text.trim(),
@@ -215,9 +236,8 @@ class _TestListScreenState extends State<TestListScreen> {
                           }
                         } catch (err) {
                           if (dialogContext.mounted) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text(_cleanError(err))),
-                            );
+                            setDialogState(
+                                () => submitError = _cleanError(err));
                           }
                         } finally {
                           if (dialogContext.mounted) {
